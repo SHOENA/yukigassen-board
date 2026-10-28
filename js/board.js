@@ -236,7 +236,8 @@ function toCourt(ev, id) {
 export function initBoard() {
   svg.addEventListener('pointerdown', (ev) => {
     const g = ev.target.closest('.token');
-    if (!g) return;
+    if (!g) return;                 // コートの余白はブラウザに任せる（ページがスクロールする）
+    ev.preventDefault();            // 駒をつかんだときはスクロールさせない
     const id = g.dataset.id;
     state.sel = state.sel === id ? null : id;
     drag = { id };
