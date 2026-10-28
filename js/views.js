@@ -2,7 +2,7 @@
  * 「つくる」と「保存した一覧」の切り替えと、未保存のときに出す確認帯。
  * ここは表示の出し分けだけを持ち、保存や破棄の判断は main.js が行う。
  */
-import { KEYS, lsSet, lsGet } from './config.js';
+import { KEYS, lsSet, lsGet } from './config.js?v=9';
 
 const viewEdit = document.getElementById('viewEdit');
 const viewList = document.getElementById('viewList');

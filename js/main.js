@@ -3,15 +3,15 @@
  * 画面ごとの処理は board / roster / formations / views に置き、
  * ここでは「どれを呼ぶか」だけを決める。
  */
-import { state } from './state.js';
-import { drawStatic, render, renderBranch, initBoard } from './board.js';
-import { buildRoster, fillRoster, initRoster } from './roster.js';
-import { setHooks, initStore, pull } from './store.js';
+import { state } from './state.js?v=9';
+import { drawStatic, render, renderBranch, initBoard } from './board.js?v=9';
+import { buildRoster, fillRoster, initRoster } from './roster.js?v=9';
+import { setHooks, initStore, pull } from './store.js?v=9';
 import {
   renderSaved, resetEdit, savePattern, initFormations,
   openFromHash, hashName, restoreAuthor, isReordering,
-} from './formations.js';
-import { setView, savedView, showLeaveBar, isLeaveBarOpen } from './views.js';
+} from './formations.js?v=9';
+import { setView, savedView, showLeaveBar, isLeaveBarOpen } from './views.js?v=9';
 
 /* 一覧の描き直しと、自動更新を止めたい状況を store に教える */
 setHooks({

@@ -3,7 +3,7 @@
  * SHARE_URL があれば Cloudflare Worker（チーム共有）、なければ localStorage（その端末だけ）。
  * 読み書きのたびに、サーバーが返した一覧でこちらを置き換える。
  */
-import { SHARE_URL, KEYS, POLL_MS, lsGet, lsSet } from './config.js';
+import { SHARE_URL, KEYS, POLL_MS, lsGet, lsSet } from './config.js?v=9';
 
 /* いま画面に出している一覧。読むのは formations.js。 */
 export let patterns = [];
