@@ -79,6 +79,18 @@ document.getElementById('leaveSave').addEventListener('click', () => {
 
 document.getElementById('refreshBtn').addEventListener('click', () => pull());
 
+/* ---- 起動画面を閉じる ---- */
+const SPLASH_MIN_MS = 600;   // 一瞬で消えてちらつかないよう、最低限は見せる
+function hideSplash() {
+  const el = document.getElementById('splash');
+  if (!el) return;
+  const wait = Math.max(0, SPLASH_MIN_MS - performance.now());
+  setTimeout(() => {
+    el.classList.add('done');
+    setTimeout(() => { el.hidden = true; }, 420);
+  }, wait);
+}
+
 /* ---- 起動 ---- */
 buildRoster();
 fillRoster();
@@ -93,4 +105,7 @@ restoreAuthor();
 /* リンクで開かれたときは「つくる」から始める */
 setView(hashName() ? 'edit' : savedView(), false);
 
-initStore().then(openFromHash);
+initStore()
+  .then(openFromHash)
+  .catch(() => {})      /* 読み込みに失敗しても起動画面は必ず閉じる */
+  .then(hideSplash);
