@@ -178,3 +178,76 @@ details.info dl{margin:10px 0 0;font-size:.78rem;display:grid;grid-template-colu
 details.info dt{color:var(--muted);}
 details.info dd{margin:0;font-family:var(--f-num);font-variant-numeric:tabular-nums;}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+
+/* ===== 起動画面（スプラッシュ） =====
+   CSSだけで動かすので、JSモジュールの読み込みを待たずに出る。
+   読み込みが終わると main.js が #splash に .done を付けてフェードアウトさせる。
+   JSが失敗して .done が付かない場合に備え、6秒後にCSSだけで必ず消す。 */
+#splash{
+  position:fixed;inset:0;z-index:50;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  padding-left:max(24px,env(safe-area-inset-left,0px));
+  padding-right:max(24px,env(safe-area-inset-right,0px));
+  background:var(--bg);
+  transition:opacity .38s ease;
+  animation:splashFailsafe 0s 6s forwards;
+}
+#splash.done{opacity:0;pointer-events:none;}
+@keyframes splashFailsafe{to{opacity:0;visibility:hidden;}}
+
+.splash-court{width:min(86vw,420px);height:auto;overflow:visible;}
+.splash-court .s-outline{
+  fill:none;stroke:var(--snow-edge);stroke-width:.16;
+  stroke-dasharray:92;stroke-dashoffset:92;
+  animation:drawCourt .55s .05s ease-out forwards;
+}
+.splash-court .s-line{
+  stroke:var(--snow-edge);stroke-width:.12;
+  stroke-dasharray:10;stroke-dashoffset:10;
+  animation:drawCourt .3s ease-out forwards;
+}
+.splash-court .s-l1{animation-delay:.32s;}
+.splash-court .s-l2{animation-delay:.42s;stroke-width:.08;opacity:.75;}
+.splash-court .s-l3{animation-delay:.42s;stroke-width:.08;opacity:.75;}
+.splash-court .s-shelters rect{
+  fill:var(--shelter);opacity:0;
+  animation:fadeIn .3s .5s ease-out forwards;
+}
+.splash-court .s-dots circle{
+  opacity:0;transform-box:fill-box;transform-origin:50% 50%;
+  animation:popIn .32s ease-out forwards;
+}
+.splash-court .s-dots .ours.fw{fill:var(--blue-fw);}
+.splash-court .s-dots .ours.bk{fill:var(--blue-bk);}
+.splash-court .s-dots .foe.fw{fill:var(--red-fw);}
+.splash-court .s-dots .foe.bk{fill:var(--red-bk);}
+.splash-court .s-dots circle:nth-child(1){animation-delay:.62s}
+.splash-court .s-dots circle:nth-child(2){animation-delay:.66s}
+.splash-court .s-dots circle:nth-child(3){animation-delay:.70s}
+.splash-court .s-dots circle:nth-child(4){animation-delay:.74s}
+.splash-court .s-dots circle:nth-child(5){animation-delay:.78s}
+.splash-court .s-dots circle:nth-child(6){animation-delay:.82s}
+.splash-court .s-dots circle:nth-child(7){animation-delay:.86s}
+.splash-court .s-dots circle:nth-child(8){animation-delay:.66s}
+.splash-court .s-dots circle:nth-child(9){animation-delay:.70s}
+.splash-court .s-dots circle:nth-child(10){animation-delay:.74s}
+.splash-court .s-dots circle:nth-child(11){animation-delay:.78s}
+.splash-court .s-dots circle:nth-child(12){animation-delay:.82s}
+.splash-court .s-dots circle:nth-child(13){animation-delay:.86s}
+.splash-court .s-dots circle:nth-child(14){animation-delay:.90s}
+
+.splash-title{
+  margin:0;font-size:.92rem;font-weight:700;letter-spacing:.04em;color:var(--muted);
+  text-align:center;opacity:0;
+  animation:fadeIn .45s .45s ease-out forwards;
+}
+
+@keyframes drawCourt{to{stroke-dashoffset:0;}}
+@keyframes fadeIn{to{opacity:1;}}
+@keyframes popIn{from{opacity:0;transform:scale(.4);}to{opacity:1;transform:scale(1);}}
+
+/* 動きを抑える設定のときは、描く演出をせず完成形を出してから消すだけにする */
+@media (prefers-reduced-motion:reduce){
+  .splash-court .s-outline,.splash-court .s-line{stroke-dashoffset:0;animation:none;}
+  .splash-court .s-shelters rect,.splash-court .s-dots circle,.splash-title{opacity:1;animation:none;}
+}
