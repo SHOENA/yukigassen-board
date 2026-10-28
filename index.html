@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d7382">
+<title>雪合戦フォーメーションボード</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<script type="module" src="js/main.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>雪合戦フォーメーションボード</h1>
+    <p class="sub">36m×10m／シェルター5基＋シャトー2基。ケースごとに選手を並べて、フォーメーション名を付けて保存。</p>
+  </header>
+
+  <div class="tabs" id="tabs">
+    <button id="tabEdit" class="on">つくる</button>
+    <button id="tabList">保存した一覧<span class="count" id="tabCount"></span></button>
+  </div>
+
+  <div class="view" id="viewEdit">
+  <div class="bar warn tight" id="leaveBar" hidden>
+    <span class="lmsg" id="leaveMsg">保存されていません。一覧に移ると入力中の内容は消えます</span>
+    <button class="ghost" id="leaveSave">保存して移る</button>
+    <button class="ghost" id="leaveDrop">保存せずに移る</button>
+    <button class="ghost" id="leaveStay">編集を続ける</button>
+  </div>
+  <div class="court-wrap" id="courtWrap">
+    <svg class="court" id="court" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" aria-label="雪合戦コート"></svg>
+  </div>
+
+  <div class="bar" id="status">配置を調整してください</div>
+
+  <section class="panel">
+    <h2>ケース（場面）</h2>
+    <div class="toolbar" id="presetRow">
+      <button data-preset="center">ケースA：センター取り</button>
+      <button data-preset="first">ケースB：1シェル止まり</button>
+      <button data-preset="double">ケースC：センター2枚取り</button>
+    </div>
+    <div class="branch" id="branchRow"></div>
+    <p class="empty" id="branchNote"></p>
+  </section>
+
+  <section class="panel">
+    <h2>フォーメーション</h2>
+    <div class="row">
+      <input id="saveName" type="text" placeholder="フォーメーション名（例：新山A）" autocomplete="off" maxlength="30" aria-label="フォーメーション名">
+    </div>
+    <div class="row tightrow">
+      <input id="saveAuthor" type="text" maxlength="12" autocomplete="off"
+        placeholder="作成者（あなたの名前・任意）" aria-label="作成者">
+    </div>
+    <hr class="div">
+    <p class="subh">メンバー</p>
+    <div class="roster" id="roster"></div>
+    <hr class="div">
+    <textarea id="saveMemo" class="memoinput" rows="2" maxlength="300"
+      placeholder="メモ（任意）" aria-label="フォーメーションのメモ"></textarea>
+    <div class="toolbar tight">
+      <button id="saveBtn" class="primary wide">保存</button>
+    </div>
+    <p class="empty">いま並べているケースA〜Cと①落ちの配置が、メンバーやメモと一緒にひとつのフォーメーションとして保存されます。</p>
+  </section>
+
+  <section class="panel">
+    <div class="legend">
+      <span><i class="dot num-fw">1</i>自チーム FW ①〜④</span>
+      <span><i class="dot num-bk">5</i>自チーム BK ⑤〜⑦</span>
+      <span><i class="dot foe-fw">1</i><i class="dot foe-bk">5</i>相手チーム</span>
+      <span><i class="dot" style="background:var(--accent)"></i>監督（コート外・自陣側）</span>
+      <span><i class="dot" style="background:var(--snow-edge)"></i>アウト（右の待機エリアへドラッグ）</span>
+      <span><i class="dot" style="background:var(--muted);opacity:.5"></i>リザーブ（名前を入れると図に出ます）</span>
+    </div>
+  </section>
+
+  <details class="info">
+    <summary>コートとルールのメモ</summary>
+    <dl>
+      <dt>コート</dt><dd>36m × 10m</dd>
+      <dt>バックライン</dt><dd>エンドラインから 8m</dd>
+      <dt>センターシェルター</dt><dd>180 × 45 × 90cm</dd>
+      <dt>第1・第2・シャトー</dt><dd>90 × 45 × 90cm</dd>
+      <dt>雪球</dt><dd>1セット 90球</dd>
+      <dt>試合</dt><dd>3分 × 3セット</dd>
+    </dl>
+    <p>フォワード①〜④は自陣バックラインより後ろに下がれません。センターラインを越えて相手コートに入れるのは3人まで、4人目が入った時点でそのセットを失います。ボードはこの2つを自動で見ています。</p>
+    <p>ケースA〜Cは、センターを取れたかどうかの場面分けです。「初手で落ちた場合」はスタート直後に①が落ちたときの組み直しで、落ちた選手は右の待機エリアに置かれます。ケース×分岐の6通りそれぞれに配置を持てて、「保存」でひとつのフォーメーションとしてまとめて記録されます。</p>
+    <p>アウトになった選手は、コート右の待機エリアへドラッグすると薄く表示され、残り人数の計算からも外れます。コート内に戻せば復帰します。競技規則では待機場所は主審側（監督とは反対側）なので、使っているコートが左右逆なら教えてください。</p>
+    <p>寸法とラインは国際雪合戦連合の競技規則にもとづく値です。シェルター位置は公式コート図をもとにした近似配置です。</p>
+  </details>
+  </div>
+
+  <div class="view" id="viewList" hidden>
+  <section class="panel">
+    <h2 class="withbtn">保存したフォーメーション<span class="spacer"></span>
+      <button id="refreshBtn" class="ghost" hidden>最新を読み込む</button></h2>
+    <div class="bar" id="shareStatus" hidden></div>
+    <input id="linkBox" class="linkbox" type="text" readonly hidden aria-label="フォーメーションのリンク">
+    <div class="patterns" id="patternList"></div>
+    <p class="empty" id="savedEmpty">保存したフォーメーションはチーム全員の画面に並びます。カードを押すと「つくる」画面に読み込まれ、ケースA〜Cを切り替えて見られます。≡ のドラッグで順番を入れ替え、「編集」で名前・作成者・メモを直せます。「リンクをコピー」でそのフォーメーションを開くリンクをLINEなどに貼れます。</p>
+  </section>
+  </div>
+</div>
+</body>
+</html>
