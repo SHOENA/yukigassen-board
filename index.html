@@ -7,8 +7,8 @@
 <title>雪合戦フォーメーションボード</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=2">
-<script type="module" src="js/main.js?v=2"></script>
+<link rel="stylesheet" href="css/style.css?v=8">
+<script type="module" src="js/main.js?v=8"></script>
 </head>
 <body>
 <!-- 起動画面。CSSだけで動くので、モジュールの読み込みを待たずに表示される。
@@ -35,11 +35,19 @@
     <button class="ghost" id="leaveDrop">保存せずに移る</button>
     <button class="ghost" id="leaveStay">編集を続ける</button>
   </div>
+  <div class="zoom" id="zoomRow" role="group" aria-label="表示範囲">
+    <span class="zlabel">表示範囲</span>
+    <div class="zseg">
+      <button data-zoom="all" class="on">全体</button>
+      <button data-zoom="own">自コート</button>
+    </div>
+  </div>
+
   <div class="court-wrap" id="courtWrap">
     <svg class="court" id="court" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" aria-label="雪合戦コート"></svg>
   </div>
 
-  <div class="bar" id="status">配置を調整してください</div>
+  <div class="bar" id="status" hidden></div>
 
   <section class="panel">
     <h2>ケース（場面）</h2>
