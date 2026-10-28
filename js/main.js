@@ -80,7 +80,7 @@ document.getElementById('leaveSave').addEventListener('click', () => {
 document.getElementById('refreshBtn').addEventListener('click', () => pull());
 
 /* ---- 起動画面を閉じる ---- */
-const SPLASH_MIN_MS = 600;   // 一瞬で消えてちらつかないよう、最低限は見せる
+const SPLASH_MIN_MS = 4000;  // 起動画面を見せる最低時間。読み込みが速くてもこの間は出す
 function hideSplash() {
   const el = document.getElementById('splash');
   if (!el) return;

@@ -11,6 +11,7 @@ export const state = {
   boards: {},         // "<ケース>:<分岐>" → 配置
   pos: null,          // いま表示している配置（boards の中身を指す）
   sel: null,          // 選択中の駒のID
+  zoom: 'all',        // 図の表示範囲 'all'（全体） | 'own'（自コート）
 
   /* フォーメーション */
   names: {},          // メンバー名（A1〜A7, C1, R1〜R3）

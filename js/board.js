@@ -10,7 +10,19 @@ import {
 import { state, slotKey, ensureBoard, isOut, markDirty } from './state.js';
 
 const svg = document.getElementById('court');
-const VIEW_BOX = '-4.3 -0.5 16.9 37';
+
+/* 図の表示範囲。'all' はコート全体、'own' は自陣（下半分）に寄せて拡大する。
+   cap は見出し（ケース名）を描く位置、band はその下に背景の帯を敷くか。 */
+const VIEWS = {
+  all: { box: '-4.3 -3.6 16.9 40.1', cap1: -1.75, cap2: -0.25, band: false },
+  own: { box: '-4.3 13.4 16.9 24.2', cap1: 14.9, cap2: 16.15, band: true },
+};
+function currentView() {
+  return VIEWS[state.zoom] || VIEWS.all;
+}
+
+/* 分岐（スタート時の人数）の表示名 */
+const BRANCH_LABEL = { full: '7名スタート', out1: '6名スタート（①落ち）' };
 
 /* 属性に入れる前に最低限の無害化をする */
 export function esc(s) {
@@ -64,8 +76,26 @@ export function drawStatic() {
       ' L' + f.x + ' ' + (f.y - 0.87) + ' Z" fill="var(--accent)"/>');
   });
 
-  svg.innerHTML = g.join('') + '<g id="reserves"></g><g id="tokens"></g>';
-  svg.setAttribute('viewBox', VIEW_BOX);
+  /* 見出し(caption)は最後に置いて最前面にする。自コート表示で帯が駒を隠すため。 */
+  svg.innerHTML = g.join('') + '<g id="reserves"></g><g id="tokens"></g><g id="caption"></g>';
+  svg.setAttribute('viewBox', currentView().box);
+}
+
+/* ---- 図の見出し（いま表示しているケースと分岐）---- */
+function drawCaption() {
+  const preset = PRESETS[state.caseKey];
+  const variant = (preset.vars || [])[0];
+  const branchLabel = (state.branch === 'out1' && variant) ? BRANCH_LABEL.out1 : BRANCH_LABEL.full;
+  const v = currentView();
+  /* 自コート表示では見出しが図の中に入るので、文字が読めるよう背景の帯を敷く */
+  const band = v.band
+    ? '<rect x="-4.3" y="' + (v.cap1 - 1.5) + '" width="16.9" height="3.1" fill="var(--bg)"/>'
+    : '';
+  svg.querySelector('#caption').innerHTML = band +
+    '<text x="5" y="' + v.cap1 + '" text-anchor="middle" font-size="1.12" font-family="var(--f-disp)" ' +
+    'font-weight="700" fill="var(--ink)">' + esc(preset.label) + '</text>' +
+    '<text x="5" y="' + v.cap2 + '" text-anchor="middle" font-size="0.86" font-family="var(--f-disp)" ' +
+    'font-weight="700" fill="var(--accent)">' + esc(branchLabel) + '</text>';
 }
 
 /* ---- リザーブ（名前が入っている控えだけ表示）---- */
@@ -147,28 +177,25 @@ function drawStatus() {
   if (back.length) msgs.push('FW ' + back.join('・') + ' がバックラインより後ろです');
 
   let over = 0;
-  let liveA = 0;
-  let liveB = 0;
   for (let j = 1; j <= 7; j++) {
-    if (!isOut('A' + j)) { liveA++; if (pos['A' + j].y < CENTER) over++; }
-    if (!isOut('B' + j)) liveB++;
+    if (!isOut('A' + j) && pos['A' + j].y < CENTER) over++;
   }
   if (over >= 4) msgs.push('相手コートに' + over + '人（4人目でセットを失います）');
 
+  /* 警告があるときだけ帯を出す。通常時は何も表示しない（図をそのまま使えるように） */
   if (msgs.length) {
+    bar.hidden = false;
     bar.className = 'bar warn';
     bar.textContent = '⚠ ' + msgs.join(' / ');
   } else {
-    bar.className = 'bar';
-    const picked = state.sel
-      ? '・' + (state.sel === 'C1' ? '監督' : state.sel.charAt(1) + '番') + 'を選択中'
-      : '';
-    bar.textContent = '自' + liveA + '人 対 相手' + liveB + '人・相手コートに' + over + '人' + picked;
+    bar.hidden = true;
+    bar.textContent = '';
   }
 }
 
 export function render() {
-  svg.setAttribute('viewBox', VIEW_BOX);
+  svg.setAttribute('viewBox', currentView().box);
+  drawCaption();
   drawReserves();
   drawTokens();
   drawStatus();
@@ -184,13 +211,13 @@ export function renderBranch() {
   });
 
   document.getElementById('branchRow').innerHTML =
-    '<span class="blabel">初手で落ちた場合</span>' +
-    '<button data-branch="full"' + (state.branch === 'full' ? ' class="on"' : '') + '>7名そのまま</button>' +
-    (variant ? '<button data-branch="out1"' + (state.branch === 'out1' ? ' class="on"' : '') + '>' + variant.label + '</button>' : '');
+    '<span class="blabel">スタート人数</span>' +
+    '<button data-branch="full"' + (state.branch === 'full' ? ' class="on"' : '') + '>' + BRANCH_LABEL.full + '</button>' +
+    (variant ? '<button data-branch="out1"' + (state.branch === 'out1' ? ' class="on"' : '') + '>' + BRANCH_LABEL.out1 + '</button>' : '');
 
   document.getElementById('branchNote').textContent =
     (state.branch === 'out1' && variant)
-      ? preset.label + '／' + variant.label + '：' + variant.note + '。落ちた選手は右の待機エリアに置いてあります。'
+      ? preset.label + '／' + BRANCH_LABEL.out1 + '：' + variant.note + '。落ちた選手は右の待機エリアに置いてあります。'
       : preset.label + 'の配置。選手を動かすとこのケースの配置として保持され、「保存」でフォーメーションにまとめて記録されます。';
 }
 
@@ -268,4 +295,18 @@ export function initBoard() {
     if (!b) return;
     switchBoard(state.caseKey, b.dataset.branch);
   });
+
+  /* 表示範囲（全体／自コート）の切り替え */
+  const zoomRow = document.getElementById('zoomRow');
+  if (zoomRow) {
+    zoomRow.addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-zoom]');
+      if (!b) return;
+      state.zoom = b.dataset.zoom;
+      zoomRow.querySelectorAll('[data-zoom]').forEach((btn) => {
+        btn.classList.toggle('on', btn.dataset.zoom === state.zoom);
+      });
+      render();
+    });
+  }
 }
