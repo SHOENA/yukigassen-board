@@ -4,8 +4,8 @@
  * 保存先は store.js（フォーメーションと同じ Worker の rules コレクション）。
  * このファイルだけで、追加フォーム・一覧・編集・削除・並び替え・リンクを賄う。
  */
-import { KEYS, lsGet, lsSet } from './config.js?v=18';
-import { patterns as rules, push, pull, initStore, setHooks } from './store.js?v=18';
+import { KEYS, lsGet, lsSet } from './config.js?v=20';
+import { patterns as rules, push, pull, initStore, setHooks } from './store.js?v=20';
 
 /* カテゴリの並びと表示名。並びはこの順に固定。 */
 const CATS = [
@@ -28,9 +28,25 @@ const authorInput = document.getElementById('ruleAuthor');
 const ruleEditor = document.getElementById('ruleEditor');
 const pinInput = document.getElementById('rulePin');
 const addBtn = document.getElementById('addBtn');
+const controlsEl = document.getElementById('rulesControls');
+const searchEl = document.getElementById('ruleSearch');
+const chipsEl = document.getElementById('catChips');
+const noMatchEl = document.getElementById('rulesNoMatch');
 
 /* カードごとの一時状態（id で持つ。並び替えで番号がずれるため）。 */
 const uiState = { askDel: null, editId: null };
+
+/* 一覧の表示状態：カテゴリ絞り込み・検索語。カードは既定で畳み、開いたものだけ expanded に持つ。 */
+const view = { cat: 'all', q: '' };
+const expanded = new Set();
+/* 絞り込み・検索中はドラッグ並び替えを止める（表示が一部だと並び順を壊すため）。 */
+function filterActive() { return view.cat !== 'all' || !!view.q.trim(); }
+function textOf(r) { return ((r.title || '') + ' ' + (r.body || '').replace(/<[^>]+>/g, ' ')).toLowerCase(); }
+/* 畳んだときに題名の下に出す本文の抜粋（1行）。 */
+function snippet(body) {
+  const t = String(body || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  return t.length > 70 ? t.slice(0, 70) + '…' : t;
+}
 
 /* ---- 小物 ---- */
 function esc(s) {
@@ -184,8 +200,9 @@ function metaOf(r) {
 }
 
 /* ---- カード ---- */
-function cardHtml(r, showCat) {
+function cardHtml(r, showCat, hideIds) {
   const id = esc(r.id);
+  const hideCls = (hideIds && hideIds.has(r.id)) ? ' is-hidden' : '';
   const editing = uiState.editId === r.id;
   const asking = uiState.askDel === r.id;
   const pinned = !!r.pinned;
@@ -214,41 +231,83 @@ function cardHtml(r, showCat) {
       '<button class="ghost" data-edit="' + id + '">編集</button>' +
       '<button class="ghost" data-ask="' + id + '">削除</button>';
 
-  return '<article class="rcard' + (pinned ? ' pinned' : '') + '" data-id="' + id + '">' +
+  const isOpen = expanded.has(r.id);
+  const snip = snippet(r.body);
+  return '<article class="rcard' + (pinned ? ' pinned' : '') + (isOpen ? ' open' : '') + hideCls + '" data-id="' + id + '">' +
     '<div class="rtop">' +
       '<button class="grip" data-grip="1" aria-label="並び替え" title="ドラッグで並び替え（↑↓キーでも可）">≡</button>' +
-      '<span class="rtitle">' + esc(r.title) + '</span>' +
+      '<button class="rhead" data-expand="' + id + '" aria-expanded="' + isOpen + '">' +
+        '<span class="rhead-main"><span class="rtitle">' + esc(r.title) + '</span>' +
+          (snip ? '<span class="rsnip">' + esc(snip) + '</span>' : '') + '</span>' +
+        '<span class="rcaret" aria-hidden="true"></span>' +
+      '</button>' +
       '<button class="pinbtn' + (pinned ? ' on' : '') + '" data-pin="' + id + '" aria-pressed="' + pinned + '" ' +
         'title="' + (pinned ? '重要から外す' : '重要にする') + '" aria-label="重要にする">★</button>' +
     '</div>' +
-    (showCat ? '<span class="rchip">' + esc(CAT_LABEL[catOf(r)]) + '</span>' : '') +
-    (r.body ? '<div class="rbody">' + displayBody(r.body) + '</div>' : '') +
-    '<div class="rmeta">' + metaOf(r) + '</div>' +
-    '<div class="rfoot">' + foot + '</div></article>';
+    '<div class="rdetail">' +
+      (showCat ? '<span class="rchip">' + esc(CAT_LABEL[catOf(r)]) + '</span>' : '') +
+      (r.body ? '<div class="rbody">' + displayBody(r.body) + '</div>' : '') +
+      '<div class="rmeta">' + metaOf(r) + '</div>' +
+      '<div class="rfoot">' + foot + '</div>' +
+    '</div></article>';
 }
 
-function groupHtml(label, items, showCat, pin) {
-  const cards = items.map((r) => cardHtml(r, showCat)).join('');
-  return '<section class="rgroup' + (pin ? ' rgroup-pin' : '') + '">' +
-    '<h2 class="rgroup-h">' + esc(label) + '<span class="rgroup-n">' + items.length + '</span></h2>' +
+function groupHtml(key, label, items, pin, o) {
+  const cards = items.map((r) => cardHtml(r, pin, o.hideIds)).join('');
+  const cls = 'rgroup' + (pin ? ' rgroup-pin' : '') + (o.hidden ? ' is-hidden' : '');
+  return '<section class="' + cls + '" data-gkey="' + esc(key) + '">' +
+    '<div class="rgroup-h">' + esc(label) + '<span class="rgroup-n">' + o.count + '</span></div>' +
     '<div class="rgroup-list" data-group>' + cards + '</div></section>';
+}
+
+function chipHtml(key, label, n) {
+  return '<button type="button" class="chip' + (view.cat === key ? ' on' : '') + '" data-chip="' + esc(key) + '">' +
+    esc(label) + '<span class="chip-n">' + n + '</span></button>';
+}
+function renderChips(pinned, buckets, match) {
+  const chips = [chipHtml('all', 'すべて', rules.filter(match).length)];
+  if (pinned.length) chips.push(chipHtml('__pinned', '★重要', pinned.filter(match).length));
+  CATS.forEach(([k, label]) => { if (buckets[k].length) chips.push(chipHtml(k, label, buckets[k].filter(match).length)); });
+  chipsEl.innerHTML = chips.join('');
 }
 
 /* ---- 一覧の描画 ---- */
 export function renderRules() {
-  emptyEl.hidden = rules.length > 0;
+  const has = rules.length > 0;
+  emptyEl.hidden = has;
+  controlsEl.hidden = !has;
+
+  const q = view.q.trim().toLowerCase();
+  const match = (r) => !q || textOf(r).includes(q);
 
   const pinned = rules.filter((r) => r.pinned);
   const buckets = {};
   CATS.forEach(([k]) => { buckets[k] = []; });
   rules.forEach((r) => { if (!r.pinned) buckets[catOf(r)].push(r); });
 
+  renderChips(pinned, buckets, match);
+
+  /* グループは常に全件レンダリングし、絞り込み/折りたたみは class で出し分ける
+     （DOM に全カードが残るので、並び順の保存が壊れない）。 */
+  const groups = [];
+  if (pinned.length) groups.push(['__pinned', '重要', pinned, true]);
+  CATS.forEach(([k, label]) => { if (buckets[k].length) groups.push([k, label, buckets[k], false]); });
+
   let html = '';
-  if (pinned.length) html += groupHtml('重要', pinned, true, true);
-  CATS.forEach(([k, label]) => {
-    if (buckets[k].length) html += groupHtml(label, buckets[k], false, false);
+  let anyVisible = false;
+  groups.forEach(([key, label, items, pin]) => {
+    const vis = items.filter(match);
+    const inFilter = view.cat === 'all' || view.cat === key;
+    const hidden = !inFilter || (!!q && vis.length === 0);
+    if (!hidden && vis.length) anyVisible = true;
+    html += groupHtml(key, label, items, pin, {
+      hidden,
+      hideIds: q ? new Set(items.filter((r) => !match(r)).map((r) => r.id)) : null,
+      count: vis.length,
+    });
   });
   listEl.innerHTML = html;
+  noMatchEl.hidden = !(has && !anyVisible);
 }
 
 /* ---- 追加・保存・削除 ---- */
@@ -442,10 +501,25 @@ function initEvents() {
     if (ev.target.closest('.re-editor')) onPaste(ev);
   });
 
+  /* 検索・カテゴリ絞り込み */
+  searchEl.addEventListener('input', () => { view.q = searchEl.value; renderRules(); });
+  chipsEl.addEventListener('click', (ev) => {
+    const c = ev.target.closest('.chip');
+    if (!c) return;
+    view.cat = c.dataset.chip;
+    renderRules();
+  });
+
   listEl.addEventListener('click', (ev) => {
     const b = ev.target.closest('button');
     if (!b) return;
-    if (b.dataset.pin !== undefined) {
+    if (b.dataset.expand !== undefined) {
+      const key = b.dataset.expand;
+      if (expanded.has(key)) expanded.delete(key); else expanded.add(key);
+      const card = b.closest('.rcard');
+      const open = card.classList.toggle('open');
+      b.setAttribute('aria-expanded', String(open));
+    } else if (b.dataset.pin !== undefined) {
       togglePin(b.dataset.pin);
     } else if (b.dataset.link !== undefined) {
       copyLink(b, b.dataset.link);
@@ -482,6 +556,7 @@ function initEvents() {
     }
     const g = ev.target.closest('[data-grip]');
     if (!g) return;
+    if (filterActive()) return;
     if (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown') return;
     ev.preventDefault();
     const card = g.closest('.rcard');
@@ -507,6 +582,7 @@ function initEvents() {
     }
     const g = ev.target.closest('[data-grip]');
     if (!g) return;
+    if (filterActive()) return;
     ev.preventDefault();
     const card = g.closest('.rcard');
     reorder = { card, group: card.parentNode, baseY: ev.clientY };

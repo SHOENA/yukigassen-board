@@ -7,8 +7,8 @@
 <title>JPT作戦共有用｜決め事</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=18">
-<script type="module" src="js/rules.js?v=18"></script>
+<link rel="stylesheet" href="css/style.css?v=20">
+<script type="module" src="js/rules.js?v=20"></script>
 </head>
 <body>
 <div class="wrap">
@@ -63,7 +63,13 @@
     <button id="refreshBtn" class="ghost" hidden>最新を読み込む</button>
   </div>
 
+  <div class="rules-controls" id="rulesControls" hidden>
+    <input id="ruleSearch" class="rsearch" type="search" placeholder="決め事を検索（タイトル・本文）" aria-label="決め事を検索" autocomplete="off">
+    <div class="chips" id="catChips"></div>
+  </div>
+
   <div class="rules" id="rulesList"></div>
+  <p class="rnomatch" id="rulesNoMatch" hidden>該当する決め事がありません。検索語やカテゴリを変えてみてください。</p>
   <p class="empty" id="rulesEmpty">まだ決め事がありません。上のフォームから追加してください。「攻撃」「守備」「声かけ・合図」「練習」「試合当日」「その他」に分けて貯めていけます。</p>
 </div>
 </body>
