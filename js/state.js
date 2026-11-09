@@ -2,7 +2,7 @@
  * 画面がいま何を表示しているかを持つ、ひとつの状態オブジェクト。
  * 各モジュールはこれを読み書きして、描画は board.js の render() に任せる。
  */
-import { W, templatePos } from './court.js?v=18';
+import { W, templatePos } from './court.js?v=20';
 
 export const state = {
   /* コート */
