@@ -1,5 +1,9 @@
 /**
- * 雪合戦フォーメーションボード — チーム共有用の保存先（Cloudflare Worker + KV）
+ * SnowBall Fight — チーム共有用の保存先（Cloudflare Worker + KV）
+ *
+ * フォーメーションと「決め事」の2種類を、同じ Worker・同じ KV で保存します。
+ * どちらを読み書きするかは collection で切り替えます（patterns / rules）。
+ * KV の中では別々のキーに入るので、版番号（rev）もそれぞれ独立しています。
  *
  * ■ 作り方（ブラウザだけで完結・無料・カード登録なし）
  *  1. https://dash.cloudflare.com にサインアップ / ログイン
@@ -14,8 +18,8 @@
  *       KV namespace : yukigassen    ← 2 で作ったもの
  *     → Deploy（保存後にもう一度 Deploy すると確実）
  *  6. Worker の URL（https://yukigassen-api.<あなたのサブドメイン>.workers.dev）をコピー
- *  7. yukigassen-board.html の先頭 var SHARE_URL='' にそのURLを貼る
- *  8. HTML を GitHub のリポジトリに push → Settings → Pages で公開
+ *  7. js/config.js の SHARE_URL='' にそのURLを貼る
+ *  8. GitHub のリポジトリに push → Settings → Pages で公開
  *     → 出てきたURLをチームに配る。各自スマホで開いて「ホーム画面に追加」
  *
  * ■ メモ
@@ -23,7 +27,8 @@
  *    もう少し絞りたい場合は下の TEAM_KEY を設定してください（下のコメント参照）。
  *  - 同時保存は版番号（rev）で弾きます。読んだあとに誰かが保存していた場合、
  *    後から押した側は保存されず「ほかの人が先に更新しました」と表示されます。
- *  - 保存した人の画面には即反映されます。他の人の画面には最大1分ほど遅れて届くことがあります。
+ *  - フォーメーションと決め事は別々に数えるので、片方を保存しても
+ *    もう片方の版番号は変わりません。
  *  - 無料枠は1日10万リクエスト・1000書き込み。7人のチームなら桁違いに余裕があります。
  *  - コードを直したら「Deploy」を押すだけ。URLは変わりません。
  */
@@ -33,8 +38,11 @@
    https://....workers.dev/?k=2026fuyu のようにして使います。 */
 const TEAM_KEY = '';
 
-const KEY = 'patterns';
-const MAX_PATTERNS = 100;
+/* 保存の種類ごとの設定。KV のキー・1件を見分ける項目・上限。 */
+const COLLECTIONS = {
+  patterns: { idField: 'name', max: 100 },
+  rules:    { idField: 'id',   max: 200 },
+};
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -56,103 +64,162 @@ export default {
     }
 
     try {
-      const { rev, patterns: list } = await readAll(env);
+      const url = new URL(request.url);
+      let body = null;
+      if (request.method === 'POST') body = await request.json();
+
+      /* どの種類を読み書きするか。POST は本文、GET はクエリで指定。
+         古いクライアント（collection なし）はフォーメーション扱いにする。 */
+      const collection = normColl(request.method === 'POST'
+        ? (body && body.collection)
+        : url.searchParams.get('collection'));
+      const conf = COLLECTIONS[collection];
+
+      const { rev, patterns: list } = await readAll(env, collection, conf.idField);
 
       if (request.method === 'GET') return json({ ok: true, rev, patterns: list });
       if (request.method !== 'POST') return json({ ok: false, error: '不明なメソッド' }, 405);
 
-      const body = await request.json();
-
       /* 楽観ロック。ブラウザが「読んだときの版番号」を送ってくるので、
          その間に誰かが保存していたら断って最新を返す（黙って上書きしない）。 */
       if (body.rev !== undefined && Number(body.rev) !== rev) {
-        return json({
-          ok: false,
-          conflict: true,
-          error: 'ほかの人が先に更新しました',
-          rev,
-          patterns: list,
-        });
+        return json({ ok: false, conflict: true, error: 'ほかの人が先に更新しました', rev, patterns: list });
       }
 
-      let out;
-
-      switch (body.action) {
-        case 'save': {
-          const p = body.pattern;
-          if (!p || !p.name) return json({ ok: false, error: 'パターン名がありません' });
-          out = list.slice();
-          const i = out.findIndex((o) => o.name === p.name);
-          if (i >= 0) out[i] = p;
-          else out.unshift(p);
-          if (out.length > MAX_PATTERNS) out = out.slice(0, MAX_PATTERNS);
-          break;
-        }
-        case 'delete': {
-          out = list.filter((o) => o.name !== body.name);
-          break;
-        }
-        case 'edit':
-        case 'rename': {
-          if (!body.to) return json({ ok: false, error: 'パターン名がありません' });
-          if (body.to !== body.from && list.some((o) => o.name === body.to)) {
-            return json({ ok: false, error: '同じ名前があります' });
-          }
-          const i = list.findIndex((o) => o.name === body.from);
-          if (i < 0) return json({ ok: false, error: '元のパターンが見つかりません' });
-          out = list.slice();
-          const patch = { name: body.to };
-          if (body.action === 'edit') {
-            patch.memo = String(body.memo || '');
-            patch.author = String(body.author || '');
-          }
-          out[i] = Object.assign({}, out[i], patch);
-          break;
-        }
-        case 'order': {
-          const names = Array.isArray(body.names) ? body.names : [];
-          const used = new Set();
-          out = [];
-          for (const n of names) {
-            const k = list.findIndex((o, idx) => !used.has(idx) && o.name === n);
-            if (k >= 0) { out.push(list[k]); used.add(k); }
-          }
-          list.forEach((o, idx) => { if (!used.has(idx)) out.push(o); });
-          break;
-        }
-        default:
-          return json({ ok: false, error: '不明な操作です: ' + body.action });
-      }
+      const r = collection === 'rules' ? rulesOp(body, list, conf.max) : patternsOp(body, list, conf.max);
+      if (r.error) return json({ ok: false, error: r.error });
 
       const nextRev = rev + 1;
-      await writeAll(env, nextRev, out);
-      return json({ ok: true, rev: nextRev, patterns: out });
+      await writeAll(env, collection, nextRev, r.out);
+      return json({ ok: true, rev: nextRev, patterns: r.out });
     } catch (err) {
       return json({ ok: false, error: String((err && err.message) || err) }, 500);
     }
   },
 };
 
-/* KVには { rev, patterns } の形で入れる。
+/* ---- フォーメーション（name で見分ける）---- */
+function patternsOp(body, list, max) {
+  switch (body.action) {
+    case 'save': {
+      const p = body.pattern;
+      if (!p || !p.name) return { error: 'パターン名がありません' };
+      let out = list.slice();
+      const i = out.findIndex((o) => o.name === p.name);
+      if (i >= 0) out[i] = p;
+      else out.unshift(p);
+      if (out.length > max) out = out.slice(0, max);
+      return { out };
+    }
+    case 'delete':
+      return { out: list.filter((o) => o.name !== body.name) };
+    case 'edit':
+    case 'rename': {
+      if (!body.to) return { error: 'パターン名がありません' };
+      if (body.to !== body.from && list.some((o) => o.name === body.to)) {
+        return { error: '同じ名前があります' };
+      }
+      const i = list.findIndex((o) => o.name === body.from);
+      if (i < 0) return { error: '元のパターンが見つかりません' };
+      const out = list.slice();
+      const patch = { name: body.to };
+      if (body.action === 'edit') {
+        patch.memo = String(body.memo || '');
+        patch.author = String(body.author || '');
+      }
+      out[i] = Object.assign({}, out[i], patch);
+      return { out };
+    }
+    case 'order':
+      return { out: reorder(list, body.names, 'name') };
+    default:
+      return { error: '不明な操作です: ' + body.action };
+  }
+}
+
+/* ---- 決め事（id で見分ける）---- */
+function rulesOp(body, list, max) {
+  switch (body.action) {
+    case 'save': {
+      const it = body.item;
+      if (!it || !it.id || !String(it.title || '').trim()) return { error: 'タイトルがありません' };
+      let out = list.slice();
+      const i = out.findIndex((o) => o.id === it.id);
+      if (i >= 0) out[i] = it;
+      else out.unshift(it);
+      if (out.length > max) out = out.slice(0, max);
+      return { out };
+    }
+    case 'delete':
+      return { out: list.filter((o) => o.id !== body.id) };
+    case 'edit': {
+      const i = list.findIndex((o) => o.id === body.id);
+      if (i < 0) return { error: '元の決め事が見つかりません' };
+      const title = String(body.title || '').trim();
+      if (!title) return { error: 'タイトルがありません' };
+      const out = list.slice();
+      out[i] = Object.assign({}, out[i], {
+        title,
+        category: String(body.category || 'other'),
+        body: String(body.body || ''),
+        author: String(body.author || ''),
+        updatedTs: Date.now(),
+      });
+      return { out };
+    }
+    case 'pin': {
+      const i = list.findIndex((o) => o.id === body.id);
+      if (i < 0) return { error: '元の決め事が見つかりません' };
+      const out = list.slice();
+      out[i] = Object.assign({}, out[i], { pinned: !!body.pinned });
+      return { out };
+    }
+    case 'order':
+      return { out: reorder(list, body.ids, 'id') };
+    default:
+      return { error: '不明な操作です: ' + body.action };
+  }
+}
+
+/* 送られてきた並び順（キーの配列）で並べ替える。
+   リストに無いキーは無視し、並びに含まれなかったものは後ろに回す。 */
+function reorder(list, order, field) {
+  const keys = Array.isArray(order) ? order : [];
+  const used = new Set();
+  const out = [];
+  for (const key of keys) {
+    const k = list.findIndex((o, idx) => !used.has(idx) && o[field] === key);
+    if (k >= 0) { out.push(list[k]); used.add(k); }
+  }
+  list.forEach((o, idx) => { if (!used.has(idx)) out.push(o); });
+  return out;
+}
+
+/* KVには { rev, patterns } の形で入れる（種類ごとに別キー）。
    rev は保存のたびに1つ増える版番号で、同時保存の検出に使う。
    配列がそのまま入っている古い形式も読めるようにしてある。 */
-async function readAll(env) {
-  const raw = await env.PATTERNS.get(KEY);
+async function readAll(env, collection, idField) {
+  const raw = await env.PATTERNS.get(collection);
   if (!raw) return { rev: 0, patterns: [] };
   try {
     const v = JSON.parse(raw);
-    if (Array.isArray(v)) return { rev: 0, patterns: v.filter((o) => o && o.name) };
+    const ok = (o) => o && o[idField];
+    if (Array.isArray(v)) return { rev: 0, patterns: v.filter(ok) };
     return {
       rev: Number(v.rev) || 0,
-      patterns: Array.isArray(v.patterns) ? v.patterns.filter((o) => o && o.name) : [],
+      patterns: Array.isArray(v.patterns) ? v.patterns.filter(ok) : [],
     };
   } catch (err) {
     return { rev: 0, patterns: [] };
   }
 }
 
-async function writeAll(env, rev, patterns) {
-  await env.PATTERNS.put(KEY, JSON.stringify({ rev, patterns }));
+async function writeAll(env, collection, rev, patterns) {
+  await env.PATTERNS.put(collection, JSON.stringify({ rev, patterns }));
+}
+
+function normColl(v) {
+  return v === 'rules' ? 'rules' : 'patterns';
 }
 
 function json(obj, status) {

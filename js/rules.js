@@ -1,0 +1,544 @@
+/**
+ * 決め事ページ。チームの申し合わせをカテゴリごとに貯めておく。
+ * 1件 = { id, title, category, body, author, ts, date, updatedTs, pinned }
+ * 保存先は store.js（フォーメーションと同じ Worker の rules コレクション）。
+ * このファイルだけで、追加フォーム・一覧・編集・削除・並び替え・リンクを賄う。
+ */
+import { KEYS, lsGet, lsSet } from './config.js?v=18';
+import { patterns as rules, push, pull, initStore, setHooks } from './store.js?v=18';
+
+/* カテゴリの並びと表示名。並びはこの順に固定。 */
+const CATS = [
+  ['attack',   '攻撃'],
+  ['defense',  '守備'],
+  ['signal',   '声かけ・合図'],
+  ['practice', '練習'],
+  ['gameday',  '試合当日'],
+  ['other',    'その他'],
+];
+const CAT_LABEL = {};
+CATS.forEach(([k, label]) => { CAT_LABEL[k] = label; });
+function catOf(r) { return CAT_LABEL[r.category] ? r.category : 'other'; }
+
+const listEl = document.getElementById('rulesList');
+const emptyEl = document.getElementById('rulesEmpty');
+const titleInput = document.getElementById('ruleTitle');
+const catSelect = document.getElementById('ruleCat');
+const authorInput = document.getElementById('ruleAuthor');
+const ruleEditor = document.getElementById('ruleEditor');
+const pinInput = document.getElementById('rulePin');
+const addBtn = document.getElementById('addBtn');
+
+/* カードごとの一時状態（id で持つ。並び替えで番号がずれるため）。 */
+const uiState = { askDel: null, editId: null };
+
+/* ---- 小物 ---- */
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+/* 本文のかんたん記法。かならず先に esc() でHTMLを無効化し、そのうえで
+   決めた記法だけをタグに置き換える。生のHTMLは一切通さない（共有される内容なので安全第一）。
+   対応: **太字** / *斜体* / 行頭「- ・ •」で箇条書き / 行頭「1.」で番号付き / URL自動リンク / 改行 */
+function fmtInline(s) {
+  s = s.replace(/\*\*([^\n*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/__([^\n_]+)__/g, '<strong>$1</strong>');
+  s = s.replace(/(^|[^*])\*([^\n*]+)\*(?!\*)/g, '$1<em>$2</em>');
+  s = s.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+  return s;
+}
+function fmtBody(src) {
+  const lines = esc(src).split('\n');
+  let html = '';
+  let list = null;
+  const close = () => { if (list) { html += '</' + list + '>'; list = null; } };
+  for (const line of lines) {
+    const ul = /^\s*[-・•]\s+(.+)$/.exec(line);
+    const ol = /^\s*\d+[.)]\s+(.+)$/.exec(line);
+    if (ul) {
+      if (list !== 'ul') { close(); html += '<ul class="rb-ul">'; list = 'ul'; }
+      html += '<li>' + fmtInline(ul[1]) + '</li>';
+    } else if (ol) {
+      if (list !== 'ol') { close(); html += '<ol class="rb-ol">'; list = 'ol'; }
+      html += '<li>' + fmtInline(ol[1]) + '</li>';
+    } else if (line.trim() === '') {
+      close(); html += '<div class="rb-sp"></div>';
+    } else {
+      close(); html += '<div class="rb-line">' + fmtInline(line) + '</div>';
+    }
+  }
+  close();
+  return html;
+}
+
+/* ---- リッチ入力（contenteditable）とHTMLサニタイズ ----
+   入力欄そのものに太字などを表示する（Teamsのチャット欄のような形）。
+   保存時・表示時に、必ず決めたタグだけへ通す（生HTML・スクリプトは除去）。 */
+const FMTBTNS =
+  '<button type="button" class="fmtbtn" data-md="bold" title="太字" aria-label="太字"><b>B</b></button>' +
+  '<button type="button" class="fmtbtn" data-md="italic" title="斜体" aria-label="斜体"><i>I</i></button>' +
+  '<button type="button" class="fmtbtn" data-md="list" title="箇条書き" aria-label="箇条書き">•</button>' +
+  '<button type="button" class="fmtbtn" data-md="link" title="リンク" aria-label="リンク">🔗</button>';
+
+const KEEP_INLINE = { B: 'strong', STRONG: 'strong', I: 'em', EM: 'em' };
+function sanWalk(node) {
+  let out = '';
+  node.childNodes.forEach((n) => {
+    if (n.nodeType === 3) { out += esc(n.nodeValue); return; }
+    if (n.nodeType !== 1) return;
+    const tag = n.tagName;
+    if (tag === 'BR') { out += '<br>'; return; }
+    if (KEEP_INLINE[tag]) {
+      const t = KEEP_INLINE[tag], inner = sanWalk(n);
+      if (inner) out += '<' + t + '>' + inner + '</' + t + '>';
+      return;
+    }
+    if (tag === 'A') {
+      const h = n.getAttribute('href') || '';
+      const inner = sanWalk(n) || esc(n.textContent);
+      out += /^https?:\/\//i.test(h)
+        ? '<a href="' + esc(h) + '" target="_blank" rel="noopener noreferrer">' + inner + '</a>'
+        : inner;
+      return;
+    }
+    if (tag === 'UL' || tag === 'OL') {
+      const t = tag.toLowerCase();
+      out += '<' + t + ' class="rb-' + t + '">' + sanWalk(n) + '</' + t + '>';
+      return;
+    }
+    if (tag === 'LI') { out += '<li>' + sanWalk(n) + '</li>'; return; }
+    if (tag === 'P' || tag === 'DIV') { out += '<div class="rb-line">' + sanWalk(n) + '</div>'; return; }
+    out += sanWalk(n); /* span/font など未対応タグは中身だけ残す */
+  });
+  return out;
+}
+function sanitizeHtml(src) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = src || '';
+  return sanWalk(tpl.content).trim();
+}
+/* 表示用。新しい決め事はHTML、昔の決め事（**記法**）も読めるよう両対応。 */
+function displayBody(src) {
+  if (!src) return '';
+  return /<\w/.test(src) ? sanitizeHtml(src) : fmtBody(src);
+}
+/* 入力欄の中身を保存値（安全なHTML）に。空なら ''。 */
+function bodyValueOf(editor) {
+  if (!editor || !(editor.textContent || '').trim()) return '';
+  return sanitizeHtml(editor.innerHTML);
+}
+/* contenteditable には placeholder が無いので自前で出し分ける。 */
+function syncEmpty(editor) {
+  if (editor) editor.classList.toggle('is-empty', !(editor.textContent || '').trim());
+}
+/* ツールバー：入力欄に直接書式を付ける（標準の execCommand を使用。追加ライブラリ不要）。 */
+function runCmd(editor, type) {
+  if (!editor) return;
+  editor.focus();
+  try { document.execCommand('styleWithCSS', false, false); } catch (e) { /* noop */ }
+  if (type === 'bold') document.execCommand('bold');
+  else if (type === 'italic') document.execCommand('italic');
+  else if (type === 'list') document.execCommand('insertUnorderedList');
+  else if (type === 'link') runLink();
+  syncEmpty(editor);
+}
+function runLink() {
+  const selObj = window.getSelection();
+  const range = selObj && selObj.rangeCount ? selObj.getRangeAt(0).cloneRange() : null;
+  const url = window.prompt('リンク先のURL（https://…）', 'https://');
+  if (range) { selObj.removeAllRanges(); selObj.addRange(range); }
+  if (!url || !/^https?:\/\//i.test(url)) return;
+  if (range && range.collapsed) {
+    document.execCommand('insertHTML', false, '<a href="' + esc(url) + '">' + esc(url) + '</a>');
+  } else {
+    document.execCommand('createLink', false, url);
+  }
+}
+/* 貼り付けは必ずサニタイズしてから挿入（生HTMLを入力欄に入れない＝XSS対策）。 */
+function onPaste(ev) {
+  const dt = ev.clipboardData;
+  if (!dt) return;
+  ev.preventDefault();
+  const html = dt.getData('text/html');
+  const ins = html ? sanitizeHtml(html) : esc(dt.getData('text/plain')).replace(/\r?\n/g, '<br>');
+  document.execCommand('insertHTML', false, ins);
+}
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+function fmtDate(d) {
+  return d.getFullYear() + '/' + pad2(d.getMonth() + 1) + '/' + pad2(d.getDate());
+}
+function today() { return fmtDate(new Date()); }
+function newId() {
+  return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function metaOf(r) {
+  const who = esc((r.author || '').trim());
+  let dateStr;
+  let label;
+  if (r.updatedTs) { dateStr = fmtDate(new Date(r.updatedTs)); label = '更新日：'; }
+  else if (r.ts) { dateStr = fmtDate(new Date(r.ts)); label = '作成日：'; }
+  else { dateStr = esc(r.date || ''); label = '作成日：'; }
+  return (who ? '作成者：' + who + ' ・ ' : '') + label + esc(dateStr);
+}
+
+/* ---- カード ---- */
+function cardHtml(r, showCat) {
+  const id = esc(r.id);
+  const editing = uiState.editId === r.id;
+  const asking = uiState.askDel === r.id;
+  const pinned = !!r.pinned;
+
+  if (editing) {
+    const opts = CATS.map(([k, label]) =>
+      '<option value="' + k + '"' + (catOf(r) === k ? ' selected' : '') + '>' + label + '</option>').join('');
+    return '<article class="rcard editing" data-id="' + id + '">' +
+      '<div class="editform">' +
+        '<input class="re-title" type="text" maxlength="60" value="' + esc(r.title) + '" placeholder="タイトル" aria-label="タイトル">' +
+        '<select class="re-cat" aria-label="カテゴリ">' + opts + '</select>' +
+        '<input class="re-author" type="text" maxlength="12" value="' + esc((r.author || '').trim()) + '" placeholder="作成者（任意）" aria-label="作成者">' +
+        '<div class="fmtbar">' + FMTBTNS + '</div>' +
+        '<div class="re-editor rbody" contenteditable="true" aria-label="内容" ' +
+          'data-placeholder="内容（任意）。文字を選んで B / I / • / 🔗">' + displayBody(r.body) + '</div>' +
+        '<div class="editbtns"><button class="primary" data-save-edit="' + id + '">保存</button>' +
+        '<button class="ghost" data-cancel="1">やめる</button></div>' +
+      '</div></article>';
+  }
+
+  const foot = asking
+    ? '<span class="ask">削除しますか？</span>' +
+      '<button class="danger" data-del="' + id + '">削除する</button>' +
+      '<button class="ghost" data-cancel="1">やめる</button>'
+    : '<button class="ghost" data-link="' + id + '">リンクをコピー</button>' +
+      '<button class="ghost" data-edit="' + id + '">編集</button>' +
+      '<button class="ghost" data-ask="' + id + '">削除</button>';
+
+  return '<article class="rcard' + (pinned ? ' pinned' : '') + '" data-id="' + id + '">' +
+    '<div class="rtop">' +
+      '<button class="grip" data-grip="1" aria-label="並び替え" title="ドラッグで並び替え（↑↓キーでも可）">≡</button>' +
+      '<span class="rtitle">' + esc(r.title) + '</span>' +
+      '<button class="pinbtn' + (pinned ? ' on' : '') + '" data-pin="' + id + '" aria-pressed="' + pinned + '" ' +
+        'title="' + (pinned ? '重要から外す' : '重要にする') + '" aria-label="重要にする">★</button>' +
+    '</div>' +
+    (showCat ? '<span class="rchip">' + esc(CAT_LABEL[catOf(r)]) + '</span>' : '') +
+    (r.body ? '<div class="rbody">' + displayBody(r.body) + '</div>' : '') +
+    '<div class="rmeta">' + metaOf(r) + '</div>' +
+    '<div class="rfoot">' + foot + '</div></article>';
+}
+
+function groupHtml(label, items, showCat, pin) {
+  const cards = items.map((r) => cardHtml(r, showCat)).join('');
+  return '<section class="rgroup' + (pin ? ' rgroup-pin' : '') + '">' +
+    '<h2 class="rgroup-h">' + esc(label) + '<span class="rgroup-n">' + items.length + '</span></h2>' +
+    '<div class="rgroup-list" data-group>' + cards + '</div></section>';
+}
+
+/* ---- 一覧の描画 ---- */
+export function renderRules() {
+  emptyEl.hidden = rules.length > 0;
+
+  const pinned = rules.filter((r) => r.pinned);
+  const buckets = {};
+  CATS.forEach(([k]) => { buckets[k] = []; });
+  rules.forEach((r) => { if (!r.pinned) buckets[catOf(r)].push(r); });
+
+  let html = '';
+  if (pinned.length) html += groupHtml('重要', pinned, true, true);
+  CATS.forEach(([k, label]) => {
+    if (buckets[k].length) html += groupHtml(label, buckets[k], false, false);
+  });
+  listEl.innerHTML = html;
+}
+
+/* ---- 追加・保存・削除 ---- */
+function addRule() {
+  const title = titleInput.value.trim();
+  if (!title) { titleInput.focus(); return; }
+  const author = authorInput.value.trim();
+  lsSet(KEYS.author, author);
+  const r = {
+    id: newId(),
+    title,
+    category: catSelect.value || 'other',
+    body: bodyValueOf(ruleEditor),
+    author,
+    ts: Date.now(),
+    date: today(),
+    pinned: !!pinInput.checked,
+  };
+  uiState.askDel = null;
+  uiState.editId = null;
+  push({ action: 'save', item: r }, (l) => {
+    const i = l.findIndex((x) => x.id === r.id);
+    if (i >= 0) l[i] = r; else l.unshift(r);
+    return l.slice(0, 200);
+  }).then((res) => {
+    if (res && res.ok) {
+      titleInput.value = '';
+      ruleEditor.innerHTML = '';
+      syncEmpty(ruleEditor);
+      pinInput.checked = false;
+      addBtn.textContent = '追加しました';
+      setTimeout(() => { addBtn.textContent = '追加'; }, 1600);
+      titleInput.focus();
+    } else if (res && res.conflict) {
+      addBtn.textContent = '保存できませんでした';
+      setTimeout(() => { addBtn.textContent = 'もう一度「追加」'; }, 1800);
+    }
+  });
+}
+
+function deleteRule(id) {
+  uiState.askDel = null;
+  uiState.editId = null;
+  return push({ action: 'delete', id }, (l) => l.filter((x) => x.id !== id));
+}
+
+function togglePin(id) {
+  const r = rules.find((x) => x.id === id);
+  if (!r) return;
+  const pinned = !r.pinned;
+  return push({ action: 'pin', id, pinned }, (l) => {
+    l.forEach((x) => { if (x.id === id) x.pinned = pinned; });
+    return l;
+  });
+}
+
+function commitEdit(id) {
+  const card = listEl.querySelector('.rcard.editing[data-id="' + cssEsc(id) + '"]');
+  if (!card) return;
+  const titleEl = card.querySelector('.re-title');
+  const catEl = card.querySelector('.re-cat');
+  const authorEl = card.querySelector('.re-author');
+  const bodyEl = card.querySelector('.re-editor');
+  if (!titleEl) return;
+  const title = titleEl.value.trim();
+  if (!title) { titleEl.focus(); return; }
+  const payload = {
+    action: 'edit',
+    id,
+    title,
+    category: catEl.value || 'other',
+    author: authorEl.value.trim(),
+    body: bodyValueOf(bodyEl),
+  };
+  uiState.editId = null;
+  push(payload, (l) => {
+    l.forEach((x) => {
+      if (x.id === id) {
+        x.title = payload.title;
+        x.category = payload.category;
+        x.author = payload.author;
+        x.body = payload.body;
+        x.updatedTs = Date.now();
+      }
+    });
+    return l;
+  });
+}
+
+/* data-id は自前生成の id なので記号は出ないが、念のため属性セレクタを安全にする */
+function cssEsc(s) {
+  return String(s).replace(/["\\]/g, '\\$&');
+}
+
+/* ---- リンク ---- */
+function ruleLink(id) {
+  return location.origin + location.pathname + '#r=' + encodeURIComponent(id);
+}
+function copyLink(btn, id) {
+  const url = ruleLink(id);
+  const box = document.getElementById('linkBox');
+  const manual = () => { box.hidden = false; box.value = url; box.focus(); box.select(); };
+  const done = () => {
+    box.hidden = true;
+    btn.textContent = 'コピーしました';
+    setTimeout(() => { if (btn.parentNode) btn.textContent = 'リンクをコピー'; }, 1600);
+  };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done, manual);
+    } else { manual(); }
+  } catch (e) { manual(); }
+}
+
+export function openFromHash() {
+  const m = /^#r=(.+)$/.exec(location.hash || '');
+  if (!m) return;
+  let id;
+  try { id = decodeURIComponent(m[1]); } catch (e) { return; }
+  const card = listEl.querySelector('.rcard[data-id="' + cssEsc(id) + '"]');
+  if (!card) return;
+  card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  card.classList.add('flash');
+  setTimeout(() => card.classList.remove('flash'), 1600);
+}
+
+/* ---- 並び替え（≡ のドラッグ。グループ内だけで動く）---- */
+let reorder = null;
+function isReordering() { return !!reorder; }
+
+function persistOrder() {
+  /* すべてのカードを画面順に読み、id の並びをサーバーへ送る。
+     表示はカテゴリごとに分けて描き直すので、各グループ内の相対順が保たれる。 */
+  const ids = [...listEl.querySelectorAll('.rcard')].map((c) => c.dataset.id);
+  push({ action: 'order', ids }, (l) => {
+    const out = [];
+    const used = [];
+    ids.forEach((id) => {
+      for (let i = 0; i < l.length; i++) {
+        if (used.indexOf(i) < 0 && l[i].id === id) { out.push(l[i]); used.push(i); break; }
+      }
+    });
+    l.forEach((it, i) => { if (used.indexOf(i) < 0) out.push(it); });
+    return out;
+  });
+}
+
+function swapTarget(card, group) {
+  const r = card.getBoundingClientRect();
+  const mid = r.top + r.height / 2;
+  for (const c of group.children) {
+    if (c === card) continue;
+    const cr = c.getBoundingClientRect();
+    const cm = cr.top + cr.height / 2;
+    const follows = !!(card.compareDocumentPosition(c) & Node.DOCUMENT_POSITION_FOLLOWING);
+    if (follows && mid > cm) return { node: c, after: true };
+    if (!follows && mid < cm) return { node: c, after: false };
+  }
+  return null;
+}
+
+function endReorder() {
+  if (!reorder) return;
+  reorder.card.style.transform = '';
+  reorder.card.classList.remove('dragging');
+  reorder = null;
+  persistOrder();
+}
+
+/* ---- イベント配線 ---- */
+function initEvents() {
+  addBtn.addEventListener('click', addRule);
+  titleInput.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') { ev.preventDefault(); addRule(); }
+  });
+  document.getElementById('ruleFmt').addEventListener('pointerdown', (ev) => {
+    const btn = ev.target.closest('.fmtbtn');
+    if (!btn) return;
+    ev.preventDefault();
+    runCmd(ruleEditor, btn.dataset.md);
+  });
+  ruleEditor.addEventListener('input', () => syncEmpty(ruleEditor));
+  ruleEditor.addEventListener('paste', onPaste);
+  syncEmpty(ruleEditor);
+  /* 編集フォームの入力欄：プレースホルダの出し分け＋貼り付けのサニタイズ */
+  listEl.addEventListener('input', (ev) => {
+    const ed = ev.target.closest('.re-editor');
+    if (ed) syncEmpty(ed);
+  });
+  listEl.addEventListener('paste', (ev) => {
+    if (ev.target.closest('.re-editor')) onPaste(ev);
+  });
+
+  listEl.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button');
+    if (!b) return;
+    if (b.dataset.pin !== undefined) {
+      togglePin(b.dataset.pin);
+    } else if (b.dataset.link !== undefined) {
+      copyLink(b, b.dataset.link);
+    } else if (b.dataset.edit !== undefined) {
+      uiState.editId = b.dataset.edit;
+      uiState.askDel = null;
+      renderRules();
+      const form = listEl.querySelector('.rcard.editing');
+      const inp = form && form.querySelector('.re-title');
+      if (inp) { inp.focus(); inp.select(); }
+      if (form) syncEmpty(form.querySelector('.re-editor'));
+    } else if (b.dataset.saveEdit !== undefined) {
+      commitEdit(b.dataset.saveEdit);
+    } else if (b.dataset.ask !== undefined) {
+      uiState.askDel = b.dataset.ask;
+      uiState.editId = null;
+      renderRules();
+    } else if (b.dataset.del !== undefined) {
+      deleteRule(b.dataset.del);
+    } else if (b.dataset.cancel !== undefined) {
+      uiState.askDel = null;
+      uiState.editId = null;
+      renderRules();
+    }
+  });
+
+  listEl.addEventListener('keydown', (ev) => {
+    if (ev.target.closest('.editform')) {
+      if (ev.key === 'Escape') { ev.preventDefault(); uiState.editId = null; renderRules(); }
+      else if (ev.key === 'Enter' && ev.target.classList.contains('re-title')) {
+        ev.preventDefault(); commitEdit(uiState.editId);
+      }
+      return;
+    }
+    const g = ev.target.closest('[data-grip]');
+    if (!g) return;
+    if (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown') return;
+    ev.preventDefault();
+    const card = g.closest('.rcard');
+    const group = card.parentNode;
+    const id = card.dataset.id;
+    if (ev.key === 'ArrowUp' && card.previousElementSibling) {
+      group.insertBefore(card, card.previousElementSibling);
+    } else if (ev.key === 'ArrowDown' && card.nextElementSibling) {
+      group.insertBefore(card.nextElementSibling, card);
+    } else { return; }
+    persistOrder();
+    const again = listEl.querySelector('.rcard[data-id="' + cssEsc(id) + '"] [data-grip]');
+    if (again) again.focus();
+  });
+
+  listEl.addEventListener('pointerdown', (ev) => {
+    const fb = ev.target.closest('.fmtbtn');
+    if (fb) {
+      ev.preventDefault();
+      const form = fb.closest('.editform');
+      if (form) runCmd(form.querySelector('.re-editor'), fb.dataset.md);
+      return;
+    }
+    const g = ev.target.closest('[data-grip]');
+    if (!g) return;
+    ev.preventDefault();
+    const card = g.closest('.rcard');
+    reorder = { card, group: card.parentNode, baseY: ev.clientY };
+    card.classList.add('dragging');
+    listEl.setPointerCapture(ev.pointerId);
+  });
+
+  listEl.addEventListener('pointermove', (ev) => {
+    if (!reorder) return;
+    const card = reorder.card;
+    card.style.transform = 'translateY(' + (ev.clientY - reorder.baseY) + 'px)';
+    const t = swapTarget(card, reorder.group);
+    if (t) {
+      reorder.group.insertBefore(card, t.after ? t.node.nextSibling : t.node);
+      reorder.baseY = ev.clientY;
+      card.style.transform = '';
+    }
+  });
+
+  listEl.addEventListener('pointerup', endReorder);
+  listEl.addEventListener('pointercancel', endReorder);
+  window.addEventListener('hashchange', openFromHash);
+}
+
+/* ---- 起動 ---- */
+setHooks({
+  onChange: renderRules,
+  isBusy: () => uiState.editId !== null || uiState.askDel !== null || isReordering(),
+});
+authorInput.value = lsGet(KEYS.author, '');
+document.getElementById('refreshBtn').addEventListener('click', () => pull());
+initEvents();
+initStore({ collection: 'rules', localKey: 'yukigassen-rules-local', cacheKey: 'yukigassen-rules-cache' })
+  .then(openFromHash)
+  .catch(() => {});

@@ -189,6 +189,78 @@ details.info dt{color:var(--muted);}
 details.info dd{margin:0;font-family:var(--f-num);font-variant-numeric:tabular-nums;}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
 
+/* ===== ページ切り替え（フォーメーション／決め事）=====
+   上の大きなピルタブ（つくる／一覧）と区別するため、下線タイプにする。 */
+.nav{display:flex;gap:16px;margin:9px 0 2px;border-bottom:1px solid var(--line);}
+.nav a{font-size:.85rem;font-weight:700;color:var(--muted);text-decoration:none;
+  padding:6px 2px;margin-bottom:-1px;border-bottom:2px solid transparent;line-height:1.3;}
+.nav a.on{color:var(--accent);border-bottom-color:var(--accent);}
+.nav a:not(.on):hover{color:var(--ink);}
+.nav a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;}
+
+/* ===== 決め事ページ ===== */
+.rule-row2{display:flex;gap:6px;}
+#ruleCat{flex:none;min-width:116px;}
+.rule-row2 #ruleAuthor{flex:1;min-width:0;}
+.row select,.rule-row2 select{font-family:inherit;font-size:.82rem;color:var(--ink);
+  background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:7px 10px;}
+.pinrow{display:flex;align-items:center;gap:8px;margin-top:10px;
+  font-size:.8rem;color:var(--ink);cursor:pointer;}
+.pinrow input{width:16px;height:16px;flex:none;accent-color:var(--accent);}
+.panel.h2row{display:flex;align-items:center;gap:8px;padding:10px 14px;}
+.h2row .h2like{font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);}
+.h2row .spacer{flex:1;min-width:0;}
+.h2row button{font-size:.7rem;padding:4px 10px;}
+
+.rules{display:flex;flex-direction:column;gap:17px;}
+.rgroup{display:flex;flex-direction:column;gap:9px;}
+.rgroup-h{font-size:.74rem;font-weight:700;letter-spacing:.06em;color:var(--muted);
+  margin:0;display:flex;align-items:center;gap:7px;padding:0 2px;}
+.rgroup-pin .rgroup-h{color:var(--accent);}
+.rgroup-pin .rgroup-h::before{content:"★";font-size:.8rem;}
+.rgroup-n{font-family:var(--f-num);font-size:.7rem;opacity:.7;font-weight:500;}
+.rgroup-list{display:flex;flex-direction:column;gap:9px;}
+
+.rcard{border:1px solid var(--line);border-radius:12px;background:var(--panel-2);
+  padding:10px 12px;display:flex;flex-direction:column;gap:7px;}
+.rcard.pinned{border-color:var(--accent);background:var(--accent-soft);}
+.rcard.flash{animation:flashCard 1.6s ease-out;}
+@keyframes flashCard{0%,45%{box-shadow:0 0 0 3px var(--accent);}100%{box-shadow:0 0 0 0 transparent;}}
+.rcard.dragging{position:relative;z-index:3;box-shadow:0 8px 20px rgba(0,0,0,.2);}
+.rcard .grip{flex:none;}
+.rtop{display:flex;align-items:center;gap:8px;}
+.rtitle{flex:1;min-width:0;font-size:.92rem;font-weight:700;line-height:1.4;word-break:break-word;}
+.pinbtn{flex:none;border:0;background:transparent;color:var(--snow-edge);font-size:1.05rem;
+  line-height:1;padding:3px 7px;border-radius:8px;}
+.pinbtn.on{color:var(--accent);}
+.rchip{align-self:flex-start;font-size:.66rem;font-weight:700;color:var(--muted);
+  background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px 9px;}
+.rbody{margin:0;font-size:.82rem;line-height:1.6;color:var(--ink);word-break:break-word;}
+.rbody .rb-line{white-space:pre-wrap;}
+.rbody .rb-sp{height:.5em;}
+.rbody strong{font-weight:700;}
+.rbody em{font-style:italic;}
+.rbody a{color:var(--accent);word-break:break-all;}
+.rbody .rb-ul,.rbody .rb-ol{margin:.15em 0;padding-left:1.25em;}
+.rbody li{margin:.1em 0;}
+.fmt-hint{margin:5px 0 0;font-size:.68rem;color:var(--muted);line-height:1.5;}
+.fmtbar{display:flex;gap:5px;margin:8px 0 5px;}
+.fmtbtn{font-size:.82rem;font-weight:700;padding:3px 11px;min-width:34px;line-height:1.2;}
+.fmtbtn b{font-weight:800;}
+.fmtbtn i{font-style:italic;font-family:Georgia,"Times New Roman",serif;}
+.re-editor{min-height:84px;border:1px solid var(--line);border-radius:10px;background:var(--panel);
+  padding:8px 11px;margin-top:2px;font-size:.85rem;line-height:1.6;color:var(--ink);overflow-wrap:anywhere;}
+.re-editor:focus{outline:2px solid var(--accent);outline-offset:1px;}
+.re-editor.is-empty::before{content:attr(data-placeholder);color:var(--muted);}
+.re-editor a{pointer-events:none;}
+.rmeta{font-size:.69rem;color:var(--muted);font-variant-numeric:tabular-nums;}
+.rfoot{display:flex;flex-wrap:wrap;align-items:center;gap:6px;}
+.rfoot button{font-size:.7rem;padding:4px 10px;}
+.rfoot .danger{color:var(--warn);border-color:var(--warn);background:var(--warn-soft);}
+.rfoot .ask{font-size:.73rem;color:var(--warn);font-weight:700;margin-right:auto;}
+.rcard .editform select{width:100%;box-sizing:border-box;font-family:inherit;font-size:.8rem;
+  color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 9px;}
+
 /* ===== 起動画面（スプラッシュ） =====
    CSSだけで動かすので、JSモジュールの読み込みを待たずに出る。
    読み込みが終わると main.js が #splash に .done を付けてフェードアウトさせる。

@@ -1,16 +1,23 @@
 /**
- * フォーメーションの保存先。
+ * 保存先（フォーメーション・決め事で共通）。
  * SHARE_URL があれば Cloudflare Worker（チーム共有）、なければ localStorage（その端末だけ）。
  * 読み書きのたびに、サーバーが返した一覧でこちらを置き換える。
+ * collection でどちらの種類かを切り替える（patterns / rules）。同じ Worker に、
+ * リクエストへ collection を添えて送り分ける。
  */
-import { SHARE_URL, KEYS, POLL_MS, lsGet, lsSet } from './config.js?v=9';
+import { SHARE_URL, KEYS, POLL_MS, lsGet, lsSet } from './config.js?v=18';
 
-/* いま画面に出している一覧。読むのは formations.js。 */
+/* いま画面に出している一覧。読むのは formations.js / rules.js。 */
 export let patterns = [];
 
 /* 保存のたびにサーバー側で1つ増える版番号。
    書き込み時に「自分が読んだときの番号」として送り、ずれていたら弾かれる。 */
 let rev = 0;
+
+/* この画面が扱う種類と、オフライン時の localStorage キー。initStore で差し替える。 */
+let collection = 'patterns';
+let localKey = KEYS.local;
+let cacheKey = KEYS.cache;
 
 const share = { url: '', state: 'off', msg: '' };
 
@@ -29,16 +36,16 @@ export function isShared() {
 
 /* ---- localStorage 側 ---- */
 function localRead() {
-  try { return JSON.parse(lsGet(KEYS.local, '[]')) || []; } catch (e) { return []; }
+  try { return JSON.parse(lsGet(localKey, '[]')) || []; } catch (e) { return []; }
 }
 function localWrite(v) {
-  lsSet(KEYS.local, JSON.stringify(v));
+  lsSet(localKey, JSON.stringify(v));
 }
 function cacheRead() {
-  try { return JSON.parse(lsGet(KEYS.cache, '[]')) || []; } catch (e) { return []; }
+  try { return JSON.parse(lsGet(cacheKey, '[]')) || []; } catch (e) { return []; }
 }
 function cacheWrite(v) {
-  lsSet(KEYS.cache, JSON.stringify(v));
+  lsSet(cacheKey, JSON.stringify(v));
 }
 
 /* ---- 通信できていないときだけ出す帯 ---- */
@@ -99,7 +106,8 @@ export function pull(quiet) {
   if (!quiet) { share.state = 'loading'; renderStatus(); }
   /* 読み直したので、前の衝突表示は消す */
   if (share.state === 'conflict') share.state = 'ok';
-  const url = share.url + (share.url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now();
+  const sep = share.url.indexOf('?') < 0 ? '?' : '&';
+  const url = share.url + sep + 'collection=' + collection + '&t=' + Date.now();
   return fetch(url)
     .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(applyResult)
@@ -125,8 +133,8 @@ export function push(body, localFn) {
     method: 'POST',
     /* text/plain にしておくと CORS のプリフライトが飛ばない */
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    /* rev を添えて送るのが楽観ロックの肝 */
-    body: JSON.stringify({ ...body, rev }),
+    /* rev を添えて送るのが楽観ロックの肝。collection でどちらの種類かを伝える。 */
+    body: JSON.stringify({ ...body, collection, rev }),
   })
     .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then((res) => {
@@ -146,8 +154,14 @@ function startPoll() {
   }, POLL_MS);
 }
 
-/* 起動時の読み込み。戻り値は最初の読み込みが終わる Promise。 */
-export function initStore() {
+/* 起動時の読み込み。戻り値は最初の読み込みが終わる Promise。
+   opts で種類とオフライン保存キーを差し替える（省略時はフォーメーション）。 */
+export function initStore(opts) {
+  if (opts) {
+    if (opts.collection) collection = opts.collection;
+    if (opts.localKey) localKey = opts.localKey;
+    if (opts.cacheKey) cacheKey = opts.cacheKey;
+  }
   share.url = SHARE_URL || '';
   if (share.url) {
     patterns = cacheRead();
