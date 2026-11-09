@@ -4,8 +4,8 @@
  * 保存先は store.js（フォーメーションと同じ Worker の rules コレクション）。
  * このファイルだけで、追加フォーム・一覧・編集・削除・並び替え・リンクを賄う。
  */
-import { KEYS, lsGet, lsSet } from './config.js?v=20';
-import { patterns as rules, push, pull, initStore, setHooks } from './store.js?v=20';
+import { KEYS, lsGet, lsSet } from './config.js?v=23';
+import { patterns as rules, push, pull, initStore, setHooks } from './store.js?v=23';
 
 /* カテゴリの並びと表示名。並びはこの順に固定。 */
 const CATS = [
@@ -434,47 +434,82 @@ export function openFromHash() {
   setTimeout(() => card.classList.remove('flash'), 1600);
 }
 
-/* ---- 並び替え（≡ のドラッグ。グループ内だけで動く）---- */
+/* ---- 並び替え（≡ のドラッグ。カテゴリを跨いだ移動もできる）---- */
 let reorder = null;
 function isReordering() { return !!reorder; }
 
-function persistOrder() {
-  /* すべてのカードを画面順に読み、id の並びをサーバーへ送る。
-     表示はカテゴリごとに分けて描き直すので、各グループ内の相対順が保たれる。 */
-  const ids = [...listEl.querySelectorAll('.rcard')].map((c) => c.dataset.id);
-  push({ action: 'order', ids }, (l) => {
-    const out = [];
-    const used = [];
-    ids.forEach((id) => {
-      for (let i = 0; i < l.length; i++) {
-        if (used.indexOf(i) < 0 && l[i].id === id) { out.push(l[i]); used.push(i); break; }
-      }
-    });
-    l.forEach((it, i) => { if (used.indexOf(i) < 0) out.push(it); });
-    return out;
+/* 指定の id 順にローカル配列を並べ替える。 */
+function orderBy(ids, l) {
+  const out = []; const used = [];
+  ids.forEach((id) => {
+    for (let i = 0; i < l.length; i++) {
+      if (used.indexOf(i) < 0 && l[i].id === id) { out.push(l[i]); used.push(i); break; }
+    }
   });
+  l.forEach((it, i) => { if (used.indexOf(i) < 0) out.push(it); });
+  return out;
+}
+function pushOrder() {
+  const ids = [...listEl.querySelectorAll('.rcard')].map((c) => c.dataset.id);
+  return push({ action: 'order', ids }, (l) => orderBy(ids, l));
 }
 
-function swapTarget(card, group) {
-  const r = card.getBoundingClientRect();
-  const mid = r.top + r.height / 2;
-  for (const c of group.children) {
-    if (c === card) continue;
-    const cr = c.getBoundingClientRect();
-    const cm = cr.top + cr.height / 2;
-    const follows = !!(card.compareDocumentPosition(c) & Node.DOCUMENT_POSITION_FOLLOWING);
-    if (follows && mid > cm) return { node: c, after: true };
-    if (!follows && mid < cm) return { node: c, after: false };
+/* ドラッグ中：ポインタ直下の要素から入れる場所を決める（別カテゴリの中も可）。
+   dragging 中のカードは pointer-events:none なので下の要素が拾える。
+   window で受けるので、指が ≡ から外れても追従する（タッチでも確実）。 */
+function onReorderMove(ev) {
+  if (!reorder) return;
+  if (ev.cancelable) ev.preventDefault();  // ドラッグ中はスクロールさせない
+  const card = reorder.card;
+  const el = document.elementFromPoint(ev.clientX, ev.clientY);
+  if (!el) return;
+  const overCard = el.closest('.rcard');
+  if (overCard && overCard !== card && !overCard.classList.contains('is-hidden')) {
+    const r = overCard.getBoundingClientRect();
+    const before = ev.clientY < r.top + r.height / 2;
+    overCard.parentNode.insertBefore(card, before ? overCard : overCard.nextSibling);
+    return;
   }
-  return null;
+  const list = el.closest('.rgroup-list');
+  if (list) { if (!list.contains(card)) list.appendChild(card); return; }
+  const sec = el.closest('.rgroup:not(.is-hidden)');
+  if (sec) { const l = sec.querySelector('.rgroup-list'); if (l && !l.contains(card)) l.appendChild(card); }
+}
+
+/* ドロップ時：落とした先のカテゴリ（または重要）に応じて分類/ピンを更新し、並び順を保存。 */
+function commitReorder(card) {
+  const id = card.dataset.id;
+  const sec = card.closest('.rgroup');
+  const gkey = sec ? sec.dataset.gkey : null;
+  const r = rules.find((x) => x.id === id);
+  let upd = null;
+  if (r && gkey) {
+    if (gkey === '__pinned') {
+      if (!r.pinned) upd = Object.assign({}, r, { pinned: true });
+    } else if (catOf(r) !== gkey || r.pinned) {
+      upd = Object.assign({}, r, { category: gkey, pinned: false });
+    }
+  }
+  if (upd) {
+    push({ action: 'save', item: upd }, (l) => {
+      const i = l.findIndex((x) => x.id === id);
+      if (i >= 0) l[i] = upd; else l.unshift(upd);
+      return l;
+    }).then(() => pushOrder());
+  } else {
+    pushOrder();
+  }
 }
 
 function endReorder() {
   if (!reorder) return;
-  reorder.card.style.transform = '';
-  reorder.card.classList.remove('dragging');
+  const card = reorder.card;
+  card.classList.remove('dragging');
   reorder = null;
-  persistOrder();
+  window.removeEventListener('pointermove', onReorderMove);
+  window.removeEventListener('pointerup', endReorder);
+  window.removeEventListener('pointercancel', endReorder);
+  commitReorder(card);
 }
 
 /* ---- イベント配線 ---- */
@@ -567,7 +602,7 @@ function initEvents() {
     } else if (ev.key === 'ArrowDown' && card.nextElementSibling) {
       group.insertBefore(card.nextElementSibling, card);
     } else { return; }
-    persistOrder();
+    pushOrder();
     const again = listEl.querySelector('.rcard[data-id="' + cssEsc(id) + '"] [data-grip]');
     if (again) again.focus();
   });
@@ -585,25 +620,14 @@ function initEvents() {
     if (filterActive()) return;
     ev.preventDefault();
     const card = g.closest('.rcard');
-    reorder = { card, group: card.parentNode, baseY: ev.clientY };
+    reorder = { card };
     card.classList.add('dragging');
-    listEl.setPointerCapture(ev.pointerId);
+    try { g.setPointerCapture(ev.pointerId); } catch (e) { /* 一部ブラウザで失敗しても window 側で追従する */ }
+    window.addEventListener('pointermove', onReorderMove, { passive: false });
+    window.addEventListener('pointerup', endReorder);
+    window.addEventListener('pointercancel', endReorder);
   });
 
-  listEl.addEventListener('pointermove', (ev) => {
-    if (!reorder) return;
-    const card = reorder.card;
-    card.style.transform = 'translateY(' + (ev.clientY - reorder.baseY) + 'px)';
-    const t = swapTarget(card, reorder.group);
-    if (t) {
-      reorder.group.insertBefore(card, t.after ? t.node.nextSibling : t.node);
-      reorder.baseY = ev.clientY;
-      card.style.transform = '';
-    }
-  });
-
-  listEl.addEventListener('pointerup', endReorder);
-  listEl.addEventListener('pointercancel', endReorder);
   window.addEventListener('hashchange', openFromHash);
 }
 

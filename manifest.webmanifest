@@ -1,0 +1,16 @@
+{
+  "name": "JPT作戦共有用",
+  "short_name": "JPT作戦",
+  "description": "スポーツ雪合戦チームの作戦・決め事共有",
+  "start_url": "index.html",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e9eff4",
+  "theme_color": "#0d7382",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

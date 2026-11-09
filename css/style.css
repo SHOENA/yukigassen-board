@@ -240,7 +240,8 @@ details.info dd{margin:0;font-family:var(--f-num);font-variant-numeric:tabular-n
 .rcard.pinned{border-color:var(--accent);background:var(--accent-soft);}
 .rcard.flash{animation:flashCard 1.6s ease-out;}
 @keyframes flashCard{0%,45%{box-shadow:0 0 0 3px var(--accent);}100%{box-shadow:0 0 0 0 transparent;}}
-.rcard.dragging{position:relative;z-index:3;box-shadow:0 8px 20px rgba(0,0,0,.2);}
+.rcard.dragging{position:relative;z-index:3;box-shadow:0 8px 20px rgba(0,0,0,.2);
+  pointer-events:none;opacity:.95;}
 .rcard .grip{flex:none;}
 .rtop{display:flex;align-items:center;gap:7px;}
 .rhead{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:none;border:0;

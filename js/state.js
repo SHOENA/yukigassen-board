@@ -2,7 +2,7 @@
  * 画面がいま何を表示しているかを持つ、ひとつの状態オブジェクト。
  * 各モジュールはこれを読み書きして、描画は board.js の render() に任せる。
  */
-import { W, templatePos } from './court.js?v=20';
+import { W, templatePos } from './court.js?v=23';
 
 export const state = {
   /* コート */
@@ -11,7 +11,7 @@ export const state = {
   boards: {},         // "<ケース>:<分岐>" → 配置
   pos: null,          // いま表示している配置（boards の中身を指す）
   sel: null,          // 選択中の駒のID
-  zoom: 'all',        // 図の表示範囲 'all'（全体） | 'own'（自コート）
+  zoom: 'own',        // 図の表示範囲 'all'（全体） | 'own'（自コート）。初期は自コート
 
   /* フォーメーション */
   names: {},          // メンバー名（A1〜A7, C1, R1〜R3）
