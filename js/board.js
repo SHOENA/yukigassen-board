@@ -6,8 +6,8 @@ import {
   W, L, CENTER, BACK_OURS, BACK_OPP,
   SHELTERS, FLAGS, COACH, OUT_A, OUT_B, RES_A,
   IDS, PRESETS, team, isFW, outZone,
-} from './court.js?v=20';
-import { state, slotKey, ensureBoard, isOut, markDirty } from './state.js?v=20';
+} from './court.js?v=23';
+import { state, slotKey, ensureBoard, isOut, markDirty } from './state.js?v=23';
 
 const svg = document.getElementById('court');
 
@@ -307,6 +307,10 @@ export function initBoard() {
         btn.classList.toggle('on', btn.dataset.zoom === state.zoom);
       });
       render();
+    });
+    /* 起動時の選択状態を state.zoom に合わせる（初期は自コート） */
+    zoomRow.querySelectorAll('[data-zoom]').forEach((btn) => {
+      btn.classList.toggle('on', btn.dataset.zoom === state.zoom);
     });
   }
 }
