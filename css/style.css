@@ -593,3 +593,8 @@ input[type="date"]{font-family:var(--f-body);}
 .tabbar a{min-width:0;}
 .tabbar span{white-space:nowrap;}
 .madd-in,.editform input,.edetail input{border-radius:10px;border:1px solid var(--line);background:#fff;}
+/* メニューの初期状態：フォーメーションをオレンジに。他のタイルに触れている間は白に戻す */
+.tiles .tile:first-child{background:var(--orange);box-shadow:0 12px 22px -10px rgba(255,140,30,.7);}
+.tiles .tile:first-child small{color:#5a3300;}
+@media (hover:hover){.tiles:hover .tile:first-child:not(:hover){background:#fff;box-shadow:var(--shadow);}
+.tiles:hover .tile:first-child:not(:hover) small{color:var(--muted);}}
