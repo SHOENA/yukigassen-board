@@ -2,13 +2,13 @@
  * 保存したフォーメーションの一覧（カード）と、保存・読み込み・編集・削除・並び替え・リンク。
  * ひとつのフォーメーションに、ケース×分岐の6通りの配置とメンバー名・メモが入る。
  */
-import { KEYS, lsSet, lsGet } from './config.js?v=27';
-import { W, L, SHELTERS, ROSTER, allSlots, clonePos } from './court.js?v=27';
-import { state, slotKey, ensureBoard } from './state.js?v=27';
-import { render, renderBranch, esc } from './board.js?v=27';
-import { fillRoster } from './roster.js?v=27';
-import { patterns, push } from './store.js?v=27';
-import { setView, setTabCount } from './views.js?v=27';
+import { KEYS, lsSet, lsGet } from './config.js?v=28';
+import { W, L, SHELTERS, ROSTER, allSlots, clonePos } from './court.js?v=28';
+import { state, slotKey, ensureBoard } from './state.js?v=28';
+import { render, renderBranch, esc } from './board.js?v=28';
+import { fillRoster } from './roster.js?v=28';
+import { patterns, push } from './store.js?v=28';
+import { setView, setTabCount } from './views.js?v=28';
 
 const list = document.getElementById('patternList');
 const nameInput = document.getElementById('saveName');

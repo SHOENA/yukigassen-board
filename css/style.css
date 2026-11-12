@@ -544,3 +544,52 @@ header h1{font-size:1.25rem;font-weight:600;}
 .panel.h2row .h2like{display:none;}
 .panel.h2row{justify-content:flex-end;margin:0;}
 .panel.h2row:has(#refreshBtn[hidden]){display:none;}
+
+/* ===== 大会予定 ===== */
+.events{display:flex;flex-direction:column;gap:24px;}
+.egroup-h{font-size:.84rem;font-weight:600;color:var(--muted);padding:0 2px 8px;margin:0;}
+.ecard{background:#fff;border-radius:14px;box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden;}
+.ecard.past{opacity:.7;}
+.ehead{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-radius:0;box-shadow:none;padding:12px 14px;}
+.ehead:hover{background:#fafafc;}
+.edate{flex:none;width:46px;height:46px;border-radius:10px;background:var(--bg);display:grid;place-content:center;text-align:center;line-height:1.1;}
+.edate b{font-size:.92rem;font-weight:600;}
+.edate small{font-size:.62rem;color:var(--muted);}
+.edate.nodate b{font-size:.7rem;color:var(--muted);}
+.emain{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.etitle{font-size:.92rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.eplace{font-size:.7rem;color:var(--muted);}
+.esum{flex:none;font-size:.68rem;color:var(--muted);text-align:right;}
+.esum b{color:var(--ink);font-weight:600;}
+.esum.none{opacity:.7;}
+.ecard .rcaret{flex:none;transition:transform .15s;}
+.ecard.open .rcaret{transform:rotate(90deg);}
+.edetail{padding:2px 14px 14px;display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--line);padding-top:12px;}
+.ememo{margin:0;font-size:.8rem;color:var(--muted);}
+.members{display:flex;flex-direction:column;}
+.mrow{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);}
+.mrow:last-child{border-bottom:0;}
+.mname{flex:1;min-width:0;font-size:.9rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;}
+.mrow.st-no .mname{color:var(--muted);text-decoration:line-through;}
+.mseg{display:flex;background:#e6e6ea;border-radius:9px;padding:2px;gap:2px;}
+.mseg button{border:0;background:transparent;border-radius:7px;padding:4px 9px;font-size:.7rem;color:var(--muted);box-shadow:none;}
+.mseg button.on{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(20,20,30,.12);}
+.mrow.st-yes .mseg button.on{background:var(--orange);}
+.mdel{border:0;background:none;box-shadow:none;color:#b7b7c0;font-size:1.05rem;padding:2px 6px;}
+.mempty{margin:0;font-size:.8rem;color:var(--muted);}
+.madd{display:flex;gap:8px;}
+.madd-in{flex:1;min-width:0;}
+.qchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.qlabel{flex-basis:100%;font-size:.68rem;color:var(--muted);}
+.qchip{border:0;background:var(--bg);border-radius:999px;padding:4px 11px;font-size:.78rem;color:var(--ink);box-shadow:none;}
+.qchip:hover{background:#ffe9cf;}
+.efoot{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;}
+.askdel{font-size:.78rem;color:var(--warn);margin-right:auto;}
+.editform{display:flex;flex-direction:column;gap:8px;}
+.ed-row{display:flex;gap:8px;}
+.ed-row input{flex:1;min-width:0;}
+.editform input{width:100%;box-sizing:border-box;padding:9px 11px;font-size:.9rem;}
+input[type="date"]{font-family:var(--f-body);}
+.tabbar a{min-width:0;}
+.tabbar span{white-space:nowrap;}
+.madd-in,.editform input,.edetail input{border-radius:10px;border:1px solid var(--line);background:#fff;}

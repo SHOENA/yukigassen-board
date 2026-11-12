@@ -5,7 +5,7 @@
  * collection でどちらの種類かを切り替える（patterns / rules）。同じ Worker に、
  * リクエストへ collection を添えて送り分ける。
  */
-import { SHARE_URL, KEYS, POLL_MS, lsGet, lsSet } from './config.js?v=27';
+import { SHARE_URL, KEYS, POLL_MS, lsGet, lsSet } from './config.js?v=28';
 
 /* いま画面に出している一覧。読むのは formations.js / rules.js。 */
 export let patterns = [];
@@ -18,6 +18,10 @@ let rev = 0;
 let collection = 'patterns';
 let localKey = KEYS.local;
 let cacheKey = KEYS.cache;
+/* 新しい種類（大会予定）は、Worker が collection を返してきたことを確かめてから書き込む。
+   古い Worker は知らない種類をフォーメーション扱いにして上書きしてしまうため。 */
+let requireEcho = false;
+let verified = true;
 
 const share = { url: '', state: 'off', msg: '' };
 
@@ -67,6 +71,11 @@ function renderStatus() {
 
 function applyResult(res) {
   if (!res || !res.ok) throw new Error((res && res.error) || '応答が不正');
+  if (requireEcho && res.collection !== collection) {
+    verified = false;
+    throw new Error('共有先（Worker）の更新が必要です');
+  }
+  verified = true;
   patterns = res.patterns || [];
   if (res.rev !== undefined) rev = Number(res.rev) || 0;
   cacheWrite(patterns);
@@ -127,6 +136,12 @@ export function push(body, localFn) {
     renderStatus();
     return Promise.resolve({ ok: true });
   }
+  if (requireEcho && !verified) {
+    share.state = 'error';
+    share.msg = '共有先（Worker）の更新が必要です。更新するまで保存できません';
+    renderStatus();
+    return Promise.resolve({ ok: false, conflict: false });
+  }
   share.state = 'loading';
   renderStatus();
   return fetch(share.url, {
@@ -161,6 +176,7 @@ export function initStore(opts) {
     if (opts.collection) collection = opts.collection;
     if (opts.localKey) localKey = opts.localKey;
     if (opts.cacheKey) cacheKey = opts.cacheKey;
+    if (opts.requireEcho) { requireEcho = true; verified = false; }
   }
   share.url = SHARE_URL || '';
   if (share.url) {
