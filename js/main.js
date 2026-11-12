@@ -3,16 +3,16 @@
  * 画面ごとの処理は board / roster / formations / views に置き、
  * ここでは「どれを呼ぶか」だけを決める。
  */
-import { state, ensureBoard, slotKey } from './state.js?v=29';
-import { drawStatic, render, renderBranch, initBoard } from './board.js?v=29';
-import { buildRoster, fillRoster, initRoster } from './roster.js?v=29';
-import { setHooks, initStore, pull } from './store.js?v=29';
+import { state, ensureBoard, slotKey } from './state.js?v=30';
+import { drawStatic, render, renderBranch, initBoard } from './board.js?v=30';
+import { buildRoster, fillRoster, initRoster } from './roster.js?v=30';
+import { setHooks, initStore, pull } from './store.js?v=30';
 import {
   renderSaved, resetEdit, savePattern, initFormations,
   openFromHash, hashName, restoreAuthor, isReordering,
-} from './formations.js?v=29';
-import { restoreSession, restoreInputs, initSession } from './session.js?v=29';
-import { setView, savedView, showLeaveBar, isLeaveBarOpen } from './views.js?v=29';
+} from './formations.js?v=30';
+import { restoreSession, restoreInputs, initSession } from './session.js?v=30';
+import { setView, savedView, showLeaveBar, isLeaveBarOpen } from './views.js?v=30';
 
 /* 一覧の描き直しと、自動更新を止めたい状況を store に教える */
 setHooks({
