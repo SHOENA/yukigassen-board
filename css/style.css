@@ -24,7 +24,7 @@
   --red-bk:#a62f38;
   --warn:#a9511c;
   --warn-soft:#f7e6d6;
-  --f-disp:"Zen Kaku Gothic New",-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;
+  --f-disp:"Noto Sans JP",-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;
   --f-num:"Roboto Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
@@ -360,3 +360,170 @@ details.info dd{margin:0;font-family:var(--f-num);font-variant-numeric:tabular-n
   .splash-court .s-outline,.splash-court .s-line{stroke-dashoffset:0;animation:none;}
   .splash-court .s-shelters rect,.splash-court .s-dots circle,.splash-title{opacity:1;animation:none;}
 }
+
+/* ===== デザイン v9「ホーム画面」=====
+   薄いグレーの地、白いカード、線画アイコン、下のタブバー。フォントは Poppins（英数）＋Noto Sans JP。
+   色は黄色1色（選択・ハイライト）。装飾は影のみ。 */
+:root,:root:not([data-theme="light"]),:root[data-theme="dark"]{
+  --bg:#f2f2f4;--panel:#ffffff;--panel-2:#f2f2f4;--ink:#16161a;--muted:#8a8a93;
+  --line:#e6e6ea;--accent:#fdc72b;--accent-soft:#fff3c4;--yel:#fdc72b;--yel-d:#e9b414;
+  --red:#c13b43;--blue:#2a5cae;
+  --snow:#fafcfe;--snow-edge:#9fb3c4;--shelter:#aebfcd;
+  --num-fw:#071019;--num-bk:#ffffff;
+  --blue-fw:#9cc4f0;--blue-bk:#1d4b94;--red-fw:#f2a7a7;--red-bk:#a62f38;
+  --warn:#c2330f;--warn-soft:#fdeae4;
+  --f-disp:"Poppins","Noto Sans JP",sans-serif;--f-body:"Poppins","Noto Sans JP",sans-serif;
+  --shadow:0 1px 2px rgba(20,20,30,.04),0 6px 16px -8px rgba(20,20,30,.12);
+  color-scheme:light;
+}
+html{background:var(--bg);}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-weight:400;}
+button,input,textarea,select{font-family:var(--f-body);}
+.wrap{gap:16px;padding-block:22px 96px;}
+.nav{display:none;}
+
+/* 見出し */
+header{background:none;border:0;border-radius:0;box-shadow:none;padding:0;color:var(--ink);overflow:visible;}
+h1{font-size:1.05rem;font-weight:600;letter-spacing:.01em;text-align:center;}
+header .sub{text-align:center;font-size:.72rem;color:var(--muted);margin:6px auto 0;max-width:30em;}
+
+/* 面 */
+.panel,details.info,.panel.h2row,.court-wrap{background:#fff;border:0;border-radius:14px;box-shadow:var(--shadow);position:static;}
+.panel{padding:16px;}
+.panel.h2row{padding:12px 16px;}
+.court-wrap{padding:6px;}
+details.info{padding:14px 16px;}
+.panel h2,.h2row .h2like{position:static;background:none;padding:0;margin:0 0 12px;font-size:.92rem;font-weight:600;
+  letter-spacing:0;text-transform:none;color:var(--ink);display:flex;align-items:center;gap:8px;}
+.panel.h2row .h2like{margin:0;}
+.panel h2::before{display:none;}
+details.info summary{font-weight:600;}
+
+/* ボタン */
+button{background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:none;
+  padding:8px 14px;font-size:.82rem;font-weight:500;transition:background .12s;}
+button:hover{background:#f7f7f9;}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,.re-editor:focus-visible,a:focus-visible{outline:2px solid var(--yel-d);outline-offset:2px;}
+button.primary,button.on,button[aria-pressed="true"]{background:var(--yel);color:var(--ink);border-color:var(--yel);font-weight:600;}
+button.primary:hover,button.on:hover{background:#ffd34d;}
+button.ghost{color:var(--muted);}
+button:disabled{opacity:.4;}
+.pfoot .danger,.rfoot .danger{color:var(--warn);background:#fff;border-color:#f0cfc6;}
+
+/* つくる／一覧 */
+.tabs{display:flex;gap:6px;background:#e6e6ea;border-radius:12px;padding:3px;border:0;box-shadow:none;}
+.tabs button{flex:1;background:transparent;border:0;border-radius:9px;padding:9px;color:var(--muted);font-weight:500;}
+.tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(20,20,30,.12);font-weight:600;}
+.tabs button:hover{background:transparent;}
+.tabs button.on:hover{background:#fff;}
+.tabs .count{color:var(--yel-d);}
+.zoom .zlabel{color:var(--muted);}
+.zseg{background:#e6e6ea;border:0;border-radius:10px;padding:2px;gap:2px;overflow:visible;box-shadow:none;}
+.zseg button{border:0;border-radius:8px;background:transparent;padding:5px 14px;color:var(--muted);}
+.zseg button + button{border-left:0;}
+.zseg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(20,20,30,.12);}
+.branch{border-top:1px solid var(--line);}
+
+/* 入力 */
+.row input,.rrow input,.memoinput,.rsearch,.row select,.rule-row2 select,.re-editor,.editform input,
+.editform textarea,.rcard .editform select,.linkbox{background:var(--bg);border:1px solid transparent;border-radius:10px;color:var(--ink);box-shadow:none;}
+.row input:focus,.rrow input:focus,.memoinput:focus,.rsearch:focus,.re-editor:focus{border-color:var(--yel-d);outline:0;background:#fff;box-shadow:0 0 0 3px rgba(253,199,43,.25);}
+::placeholder{color:#b0b0b8;}
+.rbadge{box-shadow:none;}
+.rrow.coach .rbadge{background:var(--yel);color:var(--ink);}
+.rrow:not(.bk):not(.coach):not(.res) .rbadge{background:#9cc4f0;color:#071019;}
+.rrow.bk .rbadge{background:#1d4b94;opacity:1;}
+.div{border-top:1px solid var(--line);}
+.subh i{background:var(--yel);}
+
+/* 一覧カード */
+.patterns,.rgroup-list{gap:10px;}
+.pcard,.rcard{background:#fff;border:0;border-radius:14px;box-shadow:var(--shadow);padding:12px 14px;margin:0;position:relative;}
+.pcard::before,.rcard::before{display:none;}
+.pcard.on,.rcard.pinned{background:#fff;outline:2px solid var(--yel);outline-offset:-2px;}
+.rcard.open{background:#fff;}
+.rules{gap:24px;}
+.rgroup-h{font-size:.84rem;font-weight:600;color:var(--muted);letter-spacing:.02em;padding:0 2px 8px;margin:0;}
+.rgroup-h::before,.rgroup-pin .rgroup-h::before{display:none;content:none;}
+.rgroup-n{color:var(--muted);background:none;padding:0;font-weight:400;opacity:1;}
+.rtitle{font-size:.92rem;font-weight:600;}
+.rsnip{color:var(--muted);}
+.rcaret{border-left-color:var(--muted);}
+.rhead,.pcard-main,.pinbtn,.pinbtn.on{border:0;background:none;box-shadow:none;}
+.pinbtn{color:#d0d0d6;font-size:1.1rem;padding:2px 6px;}
+.pinbtn.on{color:var(--yel);}
+.rchip{background:var(--bg);border:0;border-radius:999px;color:var(--muted);font-weight:500;}
+.rcard .grip,.pcard .grip{background:none;border:0;color:#c4c4cc;}
+.rcard.dragging,.pcard.dragging{box-shadow:0 14px 30px rgba(20,20,30,.22);}
+.rbody a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;}
+.thumb{border:0;border-radius:8px;background:var(--snow);}
+.badge{background:var(--accent-soft);color:#7a5b00;border:0;border-radius:999px;font-weight:600;}
+.pmeta,.rmeta{color:var(--muted);}
+.chips{gap:8px;}
+.chip{background:#fff;border:0;border-radius:999px;box-shadow:var(--shadow);padding:5px 13px;color:var(--muted);font-weight:500;}
+.chip.on{background:var(--yel);color:var(--ink);font-weight:600;}
+.chip:hover{background:#fff;}
+.chip.on:hover{background:var(--yel);}
+.bar{background:#fff;border:0;border-radius:12px;box-shadow:var(--shadow);color:var(--ink);}
+.bar.warn{background:var(--warn-soft);color:var(--warn);}
+#leaveBar button{color:var(--warn);}
+.fmtbtn{background:#fff;}
+.court,.court text,.splash-court{letter-spacing:0;}
+#splash{background:var(--bg);}
+#splash .splash-title{font-family:var(--f-disp);font-weight:600;color:var(--ink);}
+.splash-court .s-outline,.splash-court .s-line{stroke:var(--ink);}
+
+/* ホーム画面のタイル */
+.homehead{padding-top:6px;}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px;}
+.tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;
+  background:#fff;border-radius:12px;box-shadow:var(--shadow);color:var(--ink);text-decoration:none;
+  min-height:128px;padding:16px 10px;transition:transform .12s,box-shadow .12s;}
+.tile:active{transform:scale(.98);}
+.tile svg{width:44px;height:44px;margin-bottom:8px;fill:none;stroke:var(--ink);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+.tile b{font-size:.84rem;font-weight:600;line-height:1.35;}
+.tile small{font-size:.66rem;color:var(--muted);}
+
+
+/* 下のタブバー */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;gap:0;
+  background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);
+  padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));}
+.tabbar a{flex:1;max-width:180px;display:flex;flex-direction:column;align-items:center;gap:3px;color:#9a9aa3;
+  text-decoration:none;font-size:.62rem;font-weight:500;padding:2px 0;}
+.tabbar svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+.tabbar a.on{color:var(--ink);font-weight:600;}
+.tabbar a.on svg{stroke:var(--yel-d);}
+.rgroup-pin .rgroup-h{color:var(--muted);}
+.rsearch{background:#fff;box-shadow:var(--shadow);}
+
+/* メニュー：初期は何も選択されない。触れている間だけオレンジに塗り、離れると元に戻る */
+.tile{min-height:150px;transition:background .15s,box-shadow .15s,transform .12s;-webkit-tap-highlight-color:transparent;}
+.tile b{font-size:.92rem;}
+@media (hover:hover){.tile:hover{background:var(--orange);box-shadow:0 12px 22px -10px rgba(255,140,30,.7);}}
+.tile:active,.tile:focus-visible{background:var(--orange);outline:0;}
+.tile:hover small,.tile:active small,.tile:focus-visible small{color:#5a3300;}
+:root{--orange:#ff9f2e;}
+
+/* 戻るリンク */
+.back{display:inline-flex;align-items:center;gap:2px;margin:0 0 8px -6px;padding:6px 10px 6px 4px;border-radius:999px;
+  font-size:.8rem;font-weight:600;color:var(--ink);text-decoration:none;}
+.back svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.back:hover,.back:active{background:#e6e6ea;}
+
+/* 選択中はオレンジ、監督は黒、旗は赤（青・赤は選手の色なので避ける） */
+:root,:root:not([data-theme="light"]),:root[data-theme="dark"]{
+  --accent:#16161a;--accent-soft:#e6e8ee;--yel:#ff9f2e;--yel-d:#e8851a;--orange:#ff9f2e;
+}
+.rrow.coach .rbadge{background:#16161a;color:#fff;}
+.tabs button.on,.tabs button.on:hover{background:var(--orange);color:#16161a;box-shadow:none;}
+.zseg button.on{background:var(--orange);color:#16161a;box-shadow:none;}
+.badge{background:#ffe9cf;color:#8a4a00;}
+.tabs .count{color:#8a4a00;}
+.subh i{background:var(--orange);}
+
+/* 画面上部：アプリ名は小さく、画面名を見出しに */
+.topbar{display:flex;align-items:center;justify-content:space-between;min-height:30px;margin-bottom:10px;}
+.topbar .back{margin:0 0 0 -6px;}
+.appname{font-size:.68rem;font-weight:500;letter-spacing:.06em;color:var(--muted);}
+header h1{font-size:1.25rem;font-weight:600;}
