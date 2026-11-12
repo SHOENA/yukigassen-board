@@ -6,8 +6,8 @@ import {
   W, L, CENTER, BACK_OURS, BACK_OPP,
   SHELTERS, FLAGS, COACH, OUT_A, OUT_B, RES_A,
   IDS, PRESETS, team, isFW, outZone,
-} from './court.js?v=24';
-import { state, slotKey, ensureBoard, isOut, markDirty } from './state.js?v=24';
+} from './court.js?v=25';
+import { state, slotKey, ensureBoard, isOut, markDirty } from './state.js?v=25';
 
 const svg = document.getElementById('court');
 
@@ -36,7 +36,7 @@ export function drawStatic() {
   g.push('<rect x="' + COACH.x0 + '" y="' + CENTER + '" width="' + (COACH.x1 - COACH.x0) +
     '" height="' + (L - CENTER) + '" rx="0.18" fill="var(--accent-soft)" opacity="0.75"/>');
   g.push('<text x="' + ((COACH.x0 + COACH.x1) / 2) + '" y="' + (CENTER + 1.1) +
-    '" text-anchor="middle" font-size="0.5" fill="var(--accent)" font-family="var(--f-disp)">監督エリア</text>');
+    '" text-anchor="middle" font-size="0.5" fill="var(--muted)" font-family="var(--f-disp)">監督エリア</text>');
 
   [[OUT_A, 'var(--blue)'], [OUT_B, 'var(--red)']].forEach(([r, color]) => {
     const cx = (r.x0 + r.x1) / 2;
@@ -73,7 +73,7 @@ export function drawStatic() {
   FLAGS.forEach((f) => {
     g.push('<circle cx="' + f.x + '" cy="' + f.y + '" r="0.17" fill="var(--snow-edge)"/>');
     g.push('<path d="M' + f.x + ' ' + (f.y - 0.17) + ' L' + (f.x + 0.95) + ' ' + (f.y - 0.52) +
-      ' L' + f.x + ' ' + (f.y - 0.87) + ' Z" fill="var(--accent)"/>');
+      ' L' + f.x + ' ' + (f.y - 0.87) + ' Z" fill="var(--red)"/>');
   });
 
   /* 見出し(caption)は最後に置いて最前面にする。自コート表示で帯が駒を隠すため。 */
@@ -89,13 +89,13 @@ function drawCaption() {
   const v = currentView();
   /* 自コート表示では見出しが図の中に入るので、文字が読めるよう背景の帯を敷く */
   const band = v.band
-    ? '<rect x="-4.3" y="' + (v.cap1 - 1.5) + '" width="16.9" height="3.1" fill="var(--bg)"/>'
+    ? ''
     : '';
   svg.querySelector('#caption').innerHTML = band +
     '<text x="5" y="' + v.cap1 + '" text-anchor="middle" font-size="1.12" font-family="var(--f-disp)" ' +
-    'font-weight="700" fill="var(--ink)">' + esc(preset.label) + '</text>' +
+    'font-weight="700" fill="var(--ink)" stroke="var(--panel)" stroke-width="0.4" paint-order="stroke" stroke-linejoin="round">' + esc(preset.label) + '</text>' +
     '<text x="5" y="' + v.cap2 + '" text-anchor="middle" font-size="0.86" font-family="var(--f-disp)" ' +
-    'font-weight="700" fill="var(--accent)">' + esc(branchLabel) + '</text>';
+    'font-weight="700" fill="var(--ink)" stroke="var(--panel)" stroke-width="0.35" paint-order="stroke" stroke-linejoin="round">' + esc(branchLabel) + '</text>';
 }
 
 /* ---- リザーブ（名前が入っている控えだけ表示）---- */

@@ -3,15 +3,16 @@
  * 画面ごとの処理は board / roster / formations / views に置き、
  * ここでは「どれを呼ぶか」だけを決める。
  */
-import { state } from './state.js?v=24';
-import { drawStatic, render, renderBranch, initBoard } from './board.js?v=24';
-import { buildRoster, fillRoster, initRoster } from './roster.js?v=24';
-import { setHooks, initStore, pull } from './store.js?v=24';
+import { state, ensureBoard, slotKey } from './state.js?v=25';
+import { drawStatic, render, renderBranch, initBoard } from './board.js?v=25';
+import { buildRoster, fillRoster, initRoster } from './roster.js?v=25';
+import { setHooks, initStore, pull } from './store.js?v=25';
 import {
   renderSaved, resetEdit, savePattern, initFormations,
   openFromHash, hashName, restoreAuthor, isReordering,
-} from './formations.js?v=24';
-import { setView, savedView, showLeaveBar, isLeaveBarOpen } from './views.js?v=24';
+} from './formations.js?v=25';
+import { restoreSession, restoreInputs, initSession } from './session.js?v=25';
+import { setView, savedView, showLeaveBar, isLeaveBarOpen } from './views.js?v=25';
 
 /* 一覧の描き直しと、自動更新を止めたい状況を store に教える */
 setHooks({
@@ -92,6 +93,14 @@ function hideSplash() {
 }
 
 /* ---- 起動 ---- */
+if (!hashName()) restoreSession();
+/* ホームから来たとき：?case=（ケース指定）と ?view=（つくる／一覧）を受ける */
+const qs = new URLSearchParams(location.search);
+if (['center', 'first', 'double'].includes(qs.get('case'))) {
+  state.caseKey = qs.get('case');
+  state.branch = 'full';
+  state.pos = ensureBoard(slotKey());
+}
 buildRoster();
 fillRoster();
 initRoster();
@@ -101,9 +110,11 @@ drawStatic();
 render();
 renderBranch();
 restoreAuthor();
+restoreInputs();
+initSession();
 
 /* リンクで開かれたときは「つくる」から始める */
-setView(hashName() ? 'edit' : savedView(), false);
+setView(hashName() ? 'edit' : (qs.get('view') === 'list' ? 'list' : (qs.get('view') === 'edit' || qs.get('case')) ? 'edit' : savedView()), false);
 
 initStore()
   .then(openFromHash)
