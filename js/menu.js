@@ -1,5 +1,5 @@
 /** メニュー画面。件数だけを出す。共有先があればそこから、なければこの端末の保存分から数える。 */
-import { SHARE_URL, KEYS, lsGet } from './config.js?v=29';
+import { SHARE_URL, KEYS, lsGet } from './config.js?v=30';
 
 function countLocal(key) {
   try { return (JSON.parse(lsGet(key, '[]')) || []).length; } catch (e) { return 0; }
@@ -33,3 +33,22 @@ if (splash && !splash.hidden) {
 }
 
 load('events', 'patterns', 'cntEvent', 'yukigassen-events-cache', 'yukigassen-events-local');
+
+/* タッチ端末ではホバーがないので、タップしたタイルをオレンジにしてから少し待って遷移する */
+(function () {
+  const tiles = document.querySelector('.tiles');
+  if (!tiles || !window.matchMedia('(hover: none)').matches) return;
+  tiles.addEventListener('click', (e) => {
+    const a = e.target.closest('a.tile');
+    if (!a || e.metaKey || e.ctrlKey) return;
+    e.preventDefault();
+    tiles.classList.add('picked');
+    tiles.querySelectorAll('.tile').forEach((t) => t.classList.toggle('sel', t === a));
+    setTimeout(() => { location.href = a.href; }, 220);
+  });
+  /* 戻ってきたときは初期状態（フォーメーションがオレンジ）に戻す */
+  window.addEventListener('pageshow', () => {
+    tiles.classList.remove('picked');
+    tiles.querySelectorAll('.sel').forEach((t) => t.classList.remove('sel'));
+  });
+})();
