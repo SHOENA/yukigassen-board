@@ -3,8 +3,8 @@
  * 大会（名前・日付・場所・メモ）ごとに、メンバーを「参加／未定／不参加」で登録する。
  * 保存先は他のページと同じ Worker（collection: 'events'）。共有していないときはこの端末だけ。
  */
-import { KEYS, lsGet, lsSet } from './config.js?v=28';
-import { patterns as events, push, pull, initStore, setHooks } from './store.js?v=28';
+import { KEYS, lsGet, lsSet } from './config.js?v=29';
+import { patterns as events, push, pull, initStore, setHooks } from './store.js?v=29';
 
 const STATUS = [['yes', '参加'], ['maybe', '未定'], ['no', '不参加']];
 const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
