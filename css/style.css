@@ -527,3 +527,20 @@ button:disabled{opacity:.4;}
 .topbar .back{margin:0 0 0 -6px;}
 .appname{font-size:.68rem;font-weight:500;letter-spacing:.06em;color:var(--muted);}
 header h1{font-size:1.25rem;font-weight:600;}
+
+/* 決め事：箱の数を減らす。見出しは素の文字、絞り込みは下線、カードはカテゴリごとに1つの白い面にまとめる */
+.panel.h2row{background:none;box-shadow:none;padding:0;margin:4px 0 0;}
+.panel.h2row .h2like{font-size:1.02rem;font-weight:700;}
+.rsearch{background:#e6e6ea;box-shadow:none;border:0;border-radius:10px;}
+.rsearch:focus{background:#fff;}
+.chips{gap:4px 14px;}
+.chip,.chip:hover{background:none;box-shadow:none;border-radius:0;padding:4px 1px;border:0;border-bottom:2px solid transparent;color:var(--muted);}
+.chip.on,.chip.on:hover{background:none;color:var(--ink);border-bottom-color:var(--orange);font-weight:700;}
+.rgroup-list{background:#fff;border-radius:14px;box-shadow:var(--shadow);overflow:hidden;gap:0;}
+.rgroup-list .rcard{background:none;box-shadow:none;border-radius:0;border-bottom:1px solid var(--line);padding:12px 14px;outline:0;}
+.rgroup-list .rcard:last-child{border-bottom:0;}
+.rgroup-list .rcard.pinned{box-shadow:inset 3px 0 0 var(--orange);}
+.rgroup-list .rcard.dragging{background:#fff;box-shadow:0 14px 30px rgba(20,20,30,.22);}
+.panel.h2row .h2like{display:none;}
+.panel.h2row{justify-content:flex-end;margin:0;}
+.panel.h2row:has(#refreshBtn[hidden]){display:none;}
