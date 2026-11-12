@@ -1,8 +1,8 @@
 /**
  * SnowBall Fight — チーム共有用の保存先（Cloudflare Worker + KV）
  *
- * フォーメーションと「決め事」の2種類を、同じ Worker・同じ KV で保存します。
- * どちらを読み書きするかは collection で切り替えます（patterns / rules）。
+ * フォーメーション・「決め事」・「大会予定」の3種類を、同じ Worker・同じ KV で保存します。
+ * どれを読み書きするかは collection で切り替えます（patterns / rules / events）。
  * KV の中では別々のキーに入るので、版番号（rev）もそれぞれ独立しています。
  *
  * ■ 作り方（ブラウザだけで完結・無料・カード登録なし）
@@ -42,6 +42,7 @@ const TEAM_KEY = '';
 const COLLECTIONS = {
   patterns: { idField: 'name', max: 100 },
   rules:    { idField: 'id',   max: 200 },
+  events:   { idField: 'id',   max: 100 },
 };
 
 const CORS = {
@@ -77,21 +78,23 @@ export default {
 
       const { rev, patterns: list } = await readAll(env, collection, conf.idField);
 
-      if (request.method === 'GET') return json({ ok: true, rev, patterns: list });
+      if (request.method === 'GET') return json({ ok: true, collection, rev, patterns: list });
       if (request.method !== 'POST') return json({ ok: false, error: '不明なメソッド' }, 405);
 
       /* 楽観ロック。ブラウザが「読んだときの版番号」を送ってくるので、
          その間に誰かが保存していたら断って最新を返す（黙って上書きしない）。 */
       if (body.rev !== undefined && Number(body.rev) !== rev) {
-        return json({ ok: false, conflict: true, error: 'ほかの人が先に更新しました', rev, patterns: list });
+        return json({ ok: false, conflict: true, error: 'ほかの人が先に更新しました', collection, rev, patterns: list });
       }
 
-      const r = collection === 'rules' ? rulesOp(body, list, conf.max) : patternsOp(body, list, conf.max);
+      const r = collection === 'rules' ? rulesOp(body, list, conf.max)
+        : collection === 'events' ? eventsOp(body, list, conf.max)
+        : patternsOp(body, list, conf.max);
       if (r.error) return json({ ok: false, error: r.error });
 
       const nextRev = rev + 1;
       await writeAll(env, collection, nextRev, r.out);
-      return json({ ok: true, rev: nextRev, patterns: r.out });
+      return json({ ok: true, collection, rev: nextRev, patterns: r.out });
     } catch (err) {
       return json({ ok: false, error: String((err && err.message) || err) }, 500);
     }
@@ -181,6 +184,63 @@ function rulesOp(body, list, max) {
   }
 }
 
+/* ---- 大会予定（id で見分ける）。members は { name, status } の配列。
+   status は yes（参加）/ maybe（未定）/ no（不参加）。 ---- */
+const STATUS = ['yes', 'maybe', 'no'];
+function eventsOp(body, list, max) {
+  const find = (id) => list.findIndex((o) => o.id === id);
+  switch (body.action) {
+    case 'save': {
+      const it = body.item;
+      if (!it || !it.id || !String(it.name || '').trim()) return { error: '大会名がありません' };
+      let out = list.slice();
+      const i = out.findIndex((o) => o.id === it.id);
+      if (i >= 0) out[i] = it;
+      else out.unshift(it);
+      if (out.length > max) out = out.slice(0, max);
+      return { out };
+    }
+    case 'delete':
+      return { out: list.filter((o) => o.id !== body.id) };
+    case 'edit': {
+      const i = find(body.id);
+      if (i < 0) return { error: '大会が見つかりません' };
+      const name = String(body.name || '').trim();
+      if (!name) return { error: '大会名がありません' };
+      const out = list.slice();
+      out[i] = Object.assign({}, out[i], {
+        name,
+        date: String(body.date || ''),
+        place: String(body.place || ''),
+        memo: String(body.memo || ''),
+      });
+      return { out };
+    }
+    /* 参加メンバーの追加・状態変更・削除。大会ごとの配列をその場で更新する。 */
+    case 'member': {
+      const i = find(body.id);
+      if (i < 0) return { error: '大会が見つかりません' };
+      const name = String(body.name || '').trim().slice(0, 12);
+      if (!name) return { error: '名前がありません' };
+      const members = (list[i].members || []).slice();
+      const k = members.findIndex((m) => m.name === name);
+      if (body.op === 'remove') {
+        if (k >= 0) members.splice(k, 1);
+      } else {
+        const status = STATUS.includes(body.status) ? body.status : 'yes';
+        if (k >= 0) members[k] = { name, status };
+        else if (members.length >= 40) return { error: 'メンバーは40人までです' };
+        else members.push({ name, status });
+      }
+      const out = list.slice();
+      out[i] = Object.assign({}, list[i], { members });
+      return { out };
+    }
+    default:
+      return { error: '不明な操作です: ' + body.action };
+  }
+}
+
 /* 送られてきた並び順（キーの配列）で並べ替える。
    リストに無いキーは無視し、並びに含まれなかったものは後ろに回す。 */
 function reorder(list, order, field) {
@@ -219,7 +279,7 @@ async function writeAll(env, collection, rev, patterns) {
 }
 
 function normColl(v) {
-  return v === 'rules' ? 'rules' : 'patterns';
+  return v === 'rules' || v === 'events' ? v : 'patterns';
 }
 
 function json(obj, status) {
