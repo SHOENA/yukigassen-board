@@ -6,8 +6,8 @@ import {
   W, L, CENTER, BACK_OURS, BACK_OPP,
   SHELTERS, FLAGS, COACH, OUT_A, OUT_B, RES_A,
   IDS, PRESETS, team, isFW, outZone,
-} from './court.js?v=34';
-import { state, slotKey, ensureBoard, isOut, markDirty } from './state.js?v=34';
+} from './court.js?v=35';
+import { state, slotKey, ensureBoard, isOut, markDirty } from './state.js?v=35';
 
 const svg = document.getElementById('court');
 
@@ -15,7 +15,7 @@ const svg = document.getElementById('court');
    cap は見出し（ケース名）を描く位置、band はその下に背景の帯を敷くか。 */
 const VIEWS = {
   all: { box: '-4.3 -3.6 16.9 40.1', cap1: -1.75, cap2: -0.25, band: false },
-  own: { box: '-4.3 13.4 16.9 24.2', cap1: 14.9, cap2: 16.15, band: true },
+  own: { box: '-4.3 14.0 16.9 23.6', cap1: 15.5, cap2: 16.8, band: true },
 };
 function currentView() {
   return VIEWS[state.zoom] || VIEWS.all;
@@ -36,9 +36,9 @@ export function drawStatic() {
   g.push('<rect x="' + COACH.x0 + '" y="' + CENTER + '" width="' + (COACH.x1 - COACH.x0) +
     '" height="' + (L - CENTER) + '" rx="0.18" fill="var(--accent-soft)" opacity="0.75"/>');
   g.push('<text x="' + ((COACH.x0 + COACH.x1) / 2) + '" y="' + (CENTER + 1.1) +
-    '" text-anchor="middle" font-size="0.5" fill="var(--muted)" font-family="var(--f-disp)">監督エリア</text>');
+    '" text-anchor="middle" font-size="0.58" fill="var(--muted)" font-family="var(--f-disp)" font-weight="500">監督エリア</text>');
 
-  [[OUT_A, 'var(--blue)'], [OUT_B, 'var(--red)']].forEach(([r, color]) => {
+  [[OUT_A, 'var(--muted)'], [OUT_B, 'var(--muted)']].forEach(([r, color]) => {
     const cx = (r.x0 + r.x1) / 2;
     const cy = (r.y0 + r.y1) / 2;
     g.push('<rect x="' + r.x0 + '" y="' + (r.y0 - 0.8) + '" width="' + (r.x1 - r.x0) +
@@ -62,9 +62,9 @@ export function drawStatic() {
     g.push('<line x1="0" y1="' + y + '" x2="' + W + '" y2="' + y +
       '" stroke="var(--snow-edge)" stroke-width="0.08" stroke-dasharray="0.5 0.4" opacity="0.8"/>');
   });
-  g.push('<text x="0.35" y="' + (CENTER - 0.35) + '" font-size="0.52" fill="var(--snow-edge)" font-family="var(--f-disp)">センターライン</text>');
-  g.push('<text x="0.35" y="' + (BACK_OURS + 0.85) + '" font-size="0.52" fill="var(--snow-edge)" font-family="var(--f-disp)">バックライン</text>');
-  g.push('<text x="0.35" y="' + (BACK_OPP + 0.85) + '" font-size="0.52" fill="var(--snow-edge)" font-family="var(--f-disp)">バックライン</text>');
+  g.push('<text x="0.35" y="' + (CENTER + 0.85) + '" font-size="0.6" fill="var(--muted)" font-family="var(--f-disp)" font-weight="500">センターライン</text>');
+  g.push('<text x="0.35" y="' + (BACK_OURS + 0.85) + '" font-size="0.6" fill="var(--muted)" font-family="var(--f-disp)" font-weight="500">バックライン</text>');
+  g.push('<text x="0.35" y="' + (BACK_OPP + 0.85) + '" font-size="0.6" fill="var(--muted)" font-family="var(--f-disp)" font-weight="500">バックライン</text>');
 
   SHELTERS.forEach((s) => {
     g.push('<rect x="' + (s.x - s.w / 2) + '" y="' + (s.y - s.h / 2) +
@@ -89,13 +89,13 @@ function drawCaption() {
   const v = currentView();
   /* 自コート表示では見出しが図の中に入るので、文字が読めるよう背景の帯を敷く */
   const band = v.band
-    ? ''
+    ? '<rect x="-4.5" y="-5" width="17.3" height="22.88" fill="var(--panel)"/>'
     : '';
   svg.querySelector('#caption').innerHTML = band +
-    '<text x="5" y="' + v.cap1 + '" text-anchor="middle" font-size="1.12" font-family="var(--f-disp)" ' +
-    'font-weight="700" fill="var(--ink)" stroke="var(--panel)" stroke-width="0.4" paint-order="stroke" stroke-linejoin="round">' + esc(preset.label) + '</text>' +
-    '<text x="5" y="' + v.cap2 + '" text-anchor="middle" font-size="0.86" font-family="var(--f-disp)" ' +
-    'font-weight="700" fill="var(--ink)" stroke="var(--panel)" stroke-width="0.35" paint-order="stroke" stroke-linejoin="round">' + esc(branchLabel) + '</text>';
+    '<text x="5" y="' + v.cap1 + '" text-anchor="middle" font-size="0.98" font-family="var(--f-disp)" ' +
+    'font-weight="600" fill="var(--ink)">' + esc(preset.label) + '</text>' +
+    '<text x="5" y="' + v.cap2 + '" text-anchor="middle" font-size="0.72" font-family="var(--f-disp)" ' +
+    'font-weight="500" fill="var(--muted)">' + esc(branchLabel) + '</text>';
 }
 
 /* ---- リザーブ（名前が入っている控えだけ表示）---- */
