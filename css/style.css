@@ -603,3 +603,27 @@ input[type="date"]{font-family:var(--f-body);}
 .tiles .tile.sel small{color:#5a3300;}
 .tiles.picked .tile:not(.sel){background:#fff;box-shadow:var(--shadow);}
 .tiles.picked .tile:not(.sel) small{color:var(--muted);}
+
+/* ===== オレンジの差し色 ===== */
+header h1::after{content:"";display:block;width:32px;height:3px;border-radius:2px;background:var(--orange);margin:9px auto 0;}
+.edate{background:#fff1e0;}
+.edate b{color:var(--yel-d);}
+.edate small{color:#b9722a;}
+.edate.nodate{background:var(--bg);}
+.edate.nodate b,.edate.nodate small{color:var(--muted);}
+.esum b{color:var(--yel-d);}
+.egroup-h{display:flex;align-items:center;gap:8px;}
+.egroup-h::before{content:"";width:3px;height:12px;border-radius:2px;background:var(--orange);}
+.homehead h1::after{display:block;}
+
+/* ===== オレンジ感の追加（背景・タブ・見出しアイコン） ===== */
+:root,:root:not([data-theme="light"]),:root[data-theme="dark"]{--bg:#f6f3ef;--panel-2:#f6f3ef;}
+.edate.nodate{background:#f6f3ef;}
+.tabbar a.on{color:var(--yel-d);}
+.tabbar a.on svg{stroke:var(--orange);stroke-width:2;}
+header h1::before{content:"";display:block;width:26px;height:26px;margin:0 auto 6px;background:var(--orange);
+  -webkit-mask:var(--ico) center/contain no-repeat;mask:var(--ico) center/contain no-repeat;}
+body[data-page="formation"]{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='6' width='18' height='12' rx='1.5'/%3E%3Cpath d='M12 6v12'/%3E%3Ccircle cx='7' cy='10' r='.9' fill='black'/%3E%3Ccircle cx='7' cy='14.5' r='.9' fill='black'/%3E%3Ccircle cx='16.5' cy='12' r='.9' fill='black'/%3E%3C/svg%3E");}
+body[data-page="rules"]{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='4' width='14' height='17' rx='2'/%3E%3Cpath d='M8.5 9h7M8.5 13h7M8.5 17h4'/%3E%3C/svg%3E");}
+body[data-page="events"]{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='5.5' width='16' height='14.5' rx='2'/%3E%3Cpath d='M4 10h16M8.5 3.5v4M15.5 3.5v4'/%3E%3C/svg%3E");}
+body[data-page="menu"]{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'%3E%3Crect x='4.5' y='4.5' width='6' height='6' rx='1.2'/%3E%3Crect x='13.5' y='4.5' width='6' height='6' rx='1.2'/%3E%3Crect x='4.5' y='13.5' width='6' height='6' rx='1.2'/%3E%3Crect x='13.5' y='13.5' width='6' height='6' rx='1.2'/%3E%3C/svg%3E");}
