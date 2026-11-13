@@ -3,7 +3,7 @@
  * 作りかけの内容をこのタブの sessionStorage に預けて、戻ったときに復元する。
  * 預けるのは：ケース／分岐、各配置、メンバー名、名前・メモの入力、表示範囲、読み込み中のフォーメーション名。
  */
-import { state, ensureBoard, slotKey } from './state.js?v=31';
+import { state, ensureBoard, slotKey } from './state.js?v=32';
 
 const KEY = 'sbf-edit-session';
 const nameEl = () => document.getElementById('saveName');

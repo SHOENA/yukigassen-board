@@ -2,9 +2,9 @@
  * メンバー欄（FW・BK・監督・リザーブの名前）。
  * 名前はチームで1組のものとして state.names に持ち、コートの表示にも使う。
  */
-import { ROSTER } from './court.js?v=31';
-import { state } from './state.js?v=31';
-import { render } from './board.js?v=31';
+import { ROSTER } from './court.js?v=32';
+import { state } from './state.js?v=32';
+import { render } from './board.js?v=32';
 
 const host = document.getElementById('roster');
 
