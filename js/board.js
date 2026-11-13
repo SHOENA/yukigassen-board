@@ -6,8 +6,8 @@ import {
   W, L, CENTER, BACK_OURS, BACK_OPP,
   SHELTERS, FLAGS, COACH, OUT_A, OUT_B, RES_A,
   IDS, PRESETS, team, isFW, outZone,
-} from './court.js?v=35';
-import { state, slotKey, ensureBoard, isOut, markDirty } from './state.js?v=35';
+} from './court.js?v=36';
+import { state, slotKey, ensureBoard, isOut, markDirty } from './state.js?v=36';
 
 const svg = document.getElementById('court');
 
@@ -17,6 +17,11 @@ const VIEWS = {
   all: { box: '-4.3 -3.6 16.9 40.1', cap1: -1.75, cap2: -0.25, band: false },
   own: { box: '-4.3 14.0 16.9 23.6', cap1: 15.5, cap2: 16.8, band: true },
 };
+/* 図の枠の縦横比を表示範囲に合わせ、上下に余白ができないようにする */
+function fitAspect() {
+  const b = currentView().box.split(' ').map(Number);
+  svg.style.aspectRatio = b[2] + ' / ' + b[3];
+}
 function currentView() {
   return VIEWS[state.zoom] || VIEWS.all;
 }
@@ -79,6 +84,7 @@ export function drawStatic() {
   /* 見出し(caption)は最後に置いて最前面にする。自コート表示で帯が駒を隠すため。 */
   svg.innerHTML = g.join('') + '<g id="reserves"></g><g id="tokens"></g><g id="caption"></g>';
   svg.setAttribute('viewBox', currentView().box);
+  fitAspect();
 }
 
 /* ---- 図の見出し（いま表示しているケースと分岐）---- */
@@ -195,6 +201,7 @@ function drawStatus() {
 
 export function render() {
   svg.setAttribute('viewBox', currentView().box);
+  fitAspect();
   drawCaption();
   drawReserves();
   drawTokens();

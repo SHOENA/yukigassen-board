@@ -631,3 +631,10 @@ body[data-page="menu"]{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3
 /* ===== コート図を暖色寄りに（ライン・地・シェルター） ===== */
 :root,:root:not([data-theme="light"]),:root[data-theme="dark"]{--muted:#8a8178;--snow:#fffdfa;--snow-edge:#c4b9ac;--shelter:#d2c8bb;--accent-soft:#efeae3;}
 .court-wrap{background:#fff;}
+
+/* 図の高さは表示範囲の縦横比で決める（上下の余白なし） */
+.court-wrap{height:auto;display:block;}
+svg.court{height:auto;max-height:clamp(420px,72vh,820px);}
+
+/* hidden 属性が display:flex に負けて起動画面が再表示されていた（メニュー→各画面で毎回出る不具合） */
+#splash[hidden]{display:none !important;}
