@@ -4,8 +4,8 @@
  * 保存先は store.js（フォーメーションと同じ Worker の rules コレクション）。
  * このファイルだけで、追加フォーム・一覧・編集・削除・並び替え・リンクを賄う。
  */
-import { KEYS, lsGet, lsSet } from './config.js?v=36';
-import { patterns as rules, push, pull, initStore, setHooks } from './store.js?v=36';
+import { KEYS, lsGet, lsSet } from './config.js?v=37';
+import { patterns as rules, push, pull, initStore, setHooks } from './store.js?v=37';
 
 /* カテゴリの並びと表示名。並びはこの順に固定。 */
 const CATS = [
@@ -449,8 +449,9 @@ function orderBy(ids, l) {
   l.forEach((it, i) => { if (used.indexOf(i) < 0) out.push(it); });
   return out;
 }
-function pushOrder() {
-  const ids = [...listEl.querySelectorAll('.rcard')].map((c) => c.dataset.id);
+function domIds() { return [...listEl.querySelectorAll('.rcard')].map((c) => c.dataset.id); }
+function pushOrder(ids) {
+  ids = ids || domIds();
   return push({ action: 'order', ids }, (l) => orderBy(ids, l));
 }
 
@@ -490,14 +491,16 @@ function commitReorder(card) {
       upd = Object.assign({}, r, { category: gkey, pinned: false });
     }
   }
+  /* 分類の保存で一覧が描き直されるので、落とした位置の並び順は先に控えておく */
+  const ids = domIds();
   if (upd) {
     push({ action: 'save', item: upd }, (l) => {
       const i = l.findIndex((x) => x.id === id);
       if (i >= 0) l[i] = upd; else l.unshift(upd);
       return l;
-    }).then(() => pushOrder());
+    }).then(() => pushOrder(ids));
   } else {
-    pushOrder();
+    pushOrder(ids);
   }
 }
 
