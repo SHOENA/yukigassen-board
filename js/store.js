@@ -5,7 +5,7 @@
  * collection でどちらの種類かを切り替える（patterns / rules）。同じ Worker に、
  * リクエストへ collection を添えて送り分ける。
  */
-import { SHARE_URL, KEYS, POLL_MS, lsGet, lsSet } from './config.js?v=30';
+import { SHARE_URL, KEYS, POLL_MS, lsGet, lsSet } from './config.js?v=31';
 
 /* いま画面に出している一覧。読むのは formations.js / rules.js。 */
 export let patterns = [];

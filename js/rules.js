@@ -4,8 +4,8 @@
  * 保存先は store.js（フォーメーションと同じ Worker の rules コレクション）。
  * このファイルだけで、追加フォーム・一覧・編集・削除・並び替え・リンクを賄う。
  */
-import { KEYS, lsGet, lsSet } from './config.js?v=30';
-import { patterns as rules, push, pull, initStore, setHooks } from './store.js?v=30';
+import { KEYS, lsGet, lsSet } from './config.js?v=31';
+import { patterns as rules, push, pull, initStore, setHooks } from './store.js?v=31';
 
 /* カテゴリの並びと表示名。並びはこの順に固定。 */
 const CATS = [
