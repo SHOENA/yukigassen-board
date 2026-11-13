@@ -1,5 +1,5 @@
 /** メニュー画面。件数だけを出す。共有先があればそこから、なければこの端末の保存分から数える。 */
-import { SHARE_URL, KEYS, lsGet } from './config.js?v=30';
+import { SHARE_URL, KEYS, lsGet } from './config.js?v=31';
 
 function countLocal(key) {
   try { return (JSON.parse(lsGet(key, '[]')) || []).length; } catch (e) { return 0; }
