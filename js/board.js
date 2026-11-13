@@ -6,8 +6,8 @@ import {
   W, L, CENTER, BACK_OURS, BACK_OPP,
   SHELTERS, FLAGS, COACH, OUT_A, OUT_B, RES_A,
   IDS, PRESETS, team, isFW, outZone,
-} from './court.js?v=36';
-import { state, slotKey, ensureBoard, isOut, markDirty } from './state.js?v=36';
+} from './court.js?v=37';
+import { state, slotKey, ensureBoard, isOut, markDirty } from './state.js?v=37';
 
 const svg = document.getElementById('court');
 
